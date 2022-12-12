@@ -1,96 +1,61 @@
 package excelizex
 
-import "strconv"
-
 type Sheet struct {
-	// 工作表名
-	name string
-	// 提醒
-	notice string
+	// 表名
+	Name string `json:"name"`
+	// 顶栏提示
+	Notice string `json:"notice"`
 	// 表头
-	header []string
-	// 预置数据
-	data [][]string
-	// 最大行数
-	maxRow int
-	//
-	vSheetName string
-
-	vSheet []string
+	Header []string `json:"header"`
+	// 数据
+	Data [][]any `json:"data"`
 }
 
-func (s *Sheet) build(e *excel) (err error) {
-	file := e.getFile()
-	file.NewSheet(s.name)
-
-	if s.notice == "" {
-		var rows [][]string
-		if rows, err = file.GetRows(s.name); nil != err {
-			return
-		}
-		axis := "A" + strconv.FormatInt(int64(len(rows))+1, 10)
-
-		// 设置提示
-		if err = file.SetCellValue(s.name, axis, s.notice); err != nil {
-			return
-		}
-		if err = file.SetCellStyle(s.name, axis, axis, e.noticeStyle); nil != err {
-			return
-		}
+func NewSheet(options ...SheetOption) *Sheet {
+	sheet := new(Sheet)
+	for _, option := range options {
+		option(sheet)
 	}
 
-	if len(s.header) == 0 {
-		var rows [][]string
-		if rows, err = file.GetRows(s.name); nil != err {
-			return
-		}
-		axis := "A" + strconv.FormatInt(int64(len(rows))+1, 10)
-		if err = file.SetSheetRow(s.name, axis, &s.header); err != nil {
-			return
-		}
-		if err = file.SetRowStyle(s.name, len(rows)+1, s.maxRow, e.publicStyle); nil != err {
-			return
-		}
-	}
+	return sheet
+}
 
-	if len(s.data) == 0 {
-		for _, data := range s.data {
-			var rows [][]string
-			if rows, err = file.GetRows(s.name); nil != err {
-				return
-			}
+func (s *Sheet) SetName(name string) {
+	s.Name = name
+}
 
-			axis := "A" + strconv.FormatInt(int64(len(rows))+1, 10)
-			if err = file.SetSheetRow(s.name, axis, &data); err != nil {
-				return
-			}
-		}
-	}
+func (s *Sheet) SetNotice(notice string) {
+	s.Notice = notice
+}
 
-	// todo add sheet extra info
+func (s *Sheet) SetHeader(header []string) {
+	s.Header = header
+}
 
-	return
+func (s *Sheet) SetData(data [][]any) {
+	s.Data = data
+}
+
+func (s *Sheet) Excel() {
+
 }
 
 type SheetOption = func(*Sheet)
 
-type SheetBase struct {
-	// 工作表名
-	Name string
-	// 提醒
-	Notice string
-	// 表头
-	Header []string
-}
-
-func SetData(data [][]string) SheetOption {
-	return func(s *Sheet) {
-		s.data = data
+func SetName(name string) SheetOption {
+	return func(sheet *Sheet) {
+		sheet.Name = name
 	}
 }
 
-func SetMaxRow(maxRow int) SheetOption {
+func SetHeader(header []string) SheetOption {
 	return func(s *Sheet) {
-		s.maxRow = maxRow
+		s.Header = header
+	}
+}
+
+func SetData(data [][]any) SheetOption {
+	return func(s *Sheet) {
+		s.Data = data
 	}
 }
