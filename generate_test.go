@@ -17,7 +17,7 @@ func TestGen(t *testing.T) {
 		var expectSheet = Sheet{
 			Header: []string{"名称", "性别", "测试"},
 		}
-		sheet := gen(ttt)
+		sheet := genSheet(ttt)
 
 		if !reflect.DeepEqual(expectSheet, sheet) {
 			t.Fatalf("expect %s,but %s", expectSheet, sheet)

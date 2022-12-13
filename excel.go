@@ -6,11 +6,6 @@ import (
 
 type excel struct {
 	file *excelize.File
-
-	// 全局默认样式(设置全局列表使用数字应用文本)
-	publicStyle int
-	// 顶栏提示默认样式
-	noticeStyle int
 }
 
 func New() *excel {

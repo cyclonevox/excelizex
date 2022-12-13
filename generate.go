@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func gen(a any, name ...string) (Sheet Sheet) {
+func genSheet(a any, name ...string) (Sheet Sheet) {
 	if a == nil {
 		return
 	}
@@ -33,6 +33,26 @@ func gen(a any, name ...string) (Sheet Sheet) {
 	return
 }
 
+func genSingleData(single any) (list []any) {
+	typ := reflect.TypeOf(single)
+	val := reflect.ValueOf(single)
+
+	if typ.Kind() != reflect.Struct {
+		panic(errors.New("generate function support using struct payload single only"))
+	}
+
+	for j := 0; j < typ.NumField(); j++ {
+		field := typ.Field(j)
+
+		hasTag := field.Tag.Get("excel")
+		if hasTag != "" {
+			list = append(list, val.Field(j).Interface())
+		}
+	}
+
+	return
+}
+
 // Gen can use input slice variable generate sheet
 func Gen(slice any, name ...string) (Sheet Sheet) {
 	typ := reflect.TypeOf(slice)
@@ -43,28 +63,11 @@ func Gen(slice any, name ...string) (Sheet Sheet) {
 	}
 
 	for i := 0; i < val.Len(); i++ {
-		single := val.Index(i) // Value of item
-		singleTyp := single.Type()
-
 		if i == 0 {
-			Sheet = gen(single.Interface(), name...)
+			Sheet = genSheet(val.Index(i).Interface(), name...)
 		}
 
-		if single.Kind() != reflect.Struct {
-			panic(errors.New("generate function support using struct payload slice only"))
-		}
-
-		list := make([]interface{}, 0)
-		for j := 0; j < singleTyp.NumField(); j++ {
-			field := singleTyp.Field(i)
-
-			hasTag := field.Tag.Get("excel")
-			if hasTag != "" {
-				list = append(list, single.Field(j).Interface())
-			}
-		}
-
-		Sheet.Data = append(Sheet.Data, list)
+		Sheet.Data = append(Sheet.Data, genSingleData(val.Index(i).Interface()))
 	}
 
 	return
