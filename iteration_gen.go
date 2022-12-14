@@ -28,7 +28,7 @@ func (e *excel) StreamImport(i Iteration, option ...SheetOption) (err error) {
 			}
 			e.AddSheets(s)
 
-			if err != nil {
+			if s.Name == "" {
 				panic(errors.New("please set sheet name"))
 			}
 
