@@ -3,6 +3,7 @@ package excelizex
 import (
 	"errors"
 	"github.com/xuri/excelize/v2"
+	"strconv"
 )
 
 type Iteration interface {
@@ -15,7 +16,7 @@ type Iteration interface {
 func (e *excel) StreamImport(i Iteration, option ...SheetOption) (err error) {
 	var (
 		sw        *excelize.StreamWriter
-		beginAxis string
+		beginAxis int64
 	)
 
 	for j := 0; i.Next(); j++ {
@@ -37,15 +38,17 @@ func (e *excel) StreamImport(i Iteration, option ...SheetOption) (err error) {
 			}
 
 			if s.Notice != "" {
-				beginAxis = "A2"
+				beginAxis = 2
 			} else {
-				beginAxis = "A3"
+				beginAxis = 3
 			}
 		}
 
-		if err = sw.SetRow(beginAxis, genSingleData(result)); err != nil {
+		if err = sw.SetRow("A"+strconv.FormatInt(beginAxis, 10), genSingleData(result)); err != nil {
 			return
 		}
+
+		beginAxis++
 	}
 
 	return sw.Flush()
