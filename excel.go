@@ -22,9 +22,3 @@ func (e *excel) AddSheets(sheet ...Sheet) *excel {
 
 	return e
 }
-
-// func SetPullDown() SheetOption {
-// 	return func(s *Sheet) {
-//
-// 	}
-// }
