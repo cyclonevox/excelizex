@@ -9,9 +9,7 @@ type excel struct {
 }
 
 func New() *excel {
-	e := &excel{_excel: excelize.NewFile()}
-
-	return e
+	return &excel{_excel: excelize.NewFile()}
 }
 
 func (e *excel) getFile() *excelize.File {
