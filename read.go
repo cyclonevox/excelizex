@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func GenFormFile(file io.Reader) *excel {
+func ReadFormFile(file io.Reader) *excel {
 	var (
 		e   excel
 		err error
@@ -22,10 +22,13 @@ func GenFormFile(file io.Reader) *excel {
 	return &e
 }
 
-func (e *excel) GetData(sheetName string, model interface{}) (err error) {
-	var rows *excelize.Rows
+func (e *excel) GetData(sheetName string, model interface{}) (results []Result) {
+	var (
+		err  error
+		rows *excelize.Rows
+	)
 	if rows, err = e.getFile().Rows(sheetName); err != nil {
-		return
+		panic(err)
 	}
 
 	typ := reflect.TypeOf(model)
@@ -34,32 +37,36 @@ func (e *excel) GetData(sheetName string, model interface{}) (err error) {
 		panic(errors.New("generate function support Struct only"))
 	}
 
-	var (
-		headers = make(map[string][]string)
-	)
+	var headers []string
+	headerValidate := make(map[string][]string)
 	for j := 0; j < typ.NumField(); j++ {
 		field := val.Type().Field(j)
 
 		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
+			headers = append(headers, hasTag)
 			validate := field.Tag.Get("validate")
-			headers[hasTag] = strings.Split(validate, " ")
+			headerValidate[hasTag] = strings.Split(validate, " ")
 		}
 	}
 
-	var headerFound bool
-	var validateMap = make(map[int][]string)
+	var (
+		row         int
+		headerFound bool
+		validateMap = make(map[int][]string)
+	)
 	for rows.Next() {
+		row++
 		var columns []string
 		if columns, err = rows.Columns(); err != nil {
-			return
+			panic(err)
 		}
 
 		if !headerFound {
-			headerFound = reflect.DeepEqual(columns, headers)
+			headerFound = reflect.DeepEqual(columns, headerValidate)
 			if headerFound {
 				for index, col := range columns {
-					validateMap[index] = headers[col]
+					validateMap[index] = headerValidate[col]
 				}
 			}
 
@@ -67,10 +74,21 @@ func (e *excel) GetData(sheetName string, model interface{}) (err error) {
 		}
 
 		for index, col := range columns {
+			var errInfo []string
 			for _, vTag := range validateMap[index] {
-				if err, _ = validatorx.New().Val(col, vTag); nil != err {
-					continue
+				var trans string
+				if err, trans = validatorx.New().Val(col, vTag); nil != err {
+					errInfo = append(errInfo, headers[index]+trans)
 				}
+
+			}
+
+			if len(errInfo) > 0 {
+				results = append(results, Result{
+					ErrorRow:     row,
+					ErrorRowData: columns,
+					ErrorInfo:    errInfo,
+				})
 			}
 		}
 	}
