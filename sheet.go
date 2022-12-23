@@ -1,5 +1,7 @@
 package excelizex
 
+import "strconv"
+
 type Sheet struct {
 	// 表名
 	Name string `json:"name"`
@@ -9,6 +11,8 @@ type Sheet struct {
 	Header []string `json:"header"`
 	// 数据
 	Data [][]any `json:"data"`
+	// 写入到第几行,主要用于标记生成excel中的表时，需要续写的位置
+	writeRow int
 }
 
 func NewSheet(options ...SheetOption) *Sheet {
@@ -42,6 +46,17 @@ func (s *Sheet) Excel() *excel {
 	}
 
 	return New().AddSheets(*s)
+}
+
+// 每次调用该方法表示行数增长 返回 A1 A2... 等名称
+func (s *Sheet) writeRowName(num ...int) string {
+	if len(num) > 0 {
+		s.writeRow += num[0]
+	} else {
+		s.writeRow++
+	}
+
+	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
 }
 
 type SheetOption = func(*Sheet)

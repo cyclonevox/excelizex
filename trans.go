@@ -9,15 +9,13 @@ import (
 	"strings"
 )
 
-type Func func(sliceSingle any) error
-
 func GenFormFile(file io.Reader) *excel {
 	var (
 		e   excel
 		err error
 	)
 
-	if e.file, err = excelize.OpenReader(file); err != nil {
+	if e._excel, err = excelize.OpenReader(file); err != nil {
 		panic(err)
 	}
 
