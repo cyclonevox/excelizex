@@ -18,7 +18,14 @@ func (e *excel) getFile() *excelize.File {
 	return e.file
 }
 
-func (e *excel) AddSheets(sheet ...Sheet) *excel {
+func (e *excel) AddSheets(sheets ...Sheet) *excel {
+	for _, sheet := range sheets {
+		if sheet.Name == "" {
+			panic("need a sheet name at least")
+		}
+
+		e.file.NewSheet(sheet.Name)
+	}
 
 	return e
 }

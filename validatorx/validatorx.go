@@ -55,3 +55,13 @@ func (v *V) Struct(i interface{}) (error, map[string]string) {
 
 	return nil, nil
 }
+
+func (v *V) Val(i interface{}, tag string) (error, map[string]string) {
+
+	if err := v.validate.Var(i, tag); err != nil {
+
+		return err, err.(validator.ValidationErrors).Translate(v.chinese)
+	}
+
+	return nil, nil
+}

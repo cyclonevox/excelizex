@@ -36,8 +36,12 @@ func (s *Sheet) SetData(data [][]any) {
 	s.Data = data
 }
 
-func (s *Sheet) Excel() {
+func (s *Sheet) Excel() *excel {
+	if s.Name == "" {
+		panic("need a sheet name at least")
+	}
 
+	return New().AddSheets(*s)
 }
 
 type SheetOption = func(*Sheet)

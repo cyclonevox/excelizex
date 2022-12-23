@@ -51,5 +51,7 @@ func (e *excel) StreamImport(i Iteration, option ...SheetOption) (err error) {
 		beginAxis++
 	}
 
+	i.Close()
+
 	return sw.Flush()
 }
