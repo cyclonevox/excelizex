@@ -63,7 +63,7 @@ func (e *excel) GetData(sheetName string, model interface{}) (results []Result) 
 		}
 
 		if !headerFound {
-			headerFound = reflect.DeepEqual(columns, headerValidate)
+			headerFound = reflect.DeepEqual(columns, headers)
 			if headerFound {
 				for index, col := range columns {
 					validateMap[index] = headerValidate[col]
