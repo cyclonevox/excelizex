@@ -6,8 +6,12 @@ import (
 	"github.com/xuri/excelize/v2"
 	"io"
 	"reflect"
-	"strings"
+	"strconv"
 )
+
+type Importable interface {
+	Import() error
+}
 
 func ReadFormFile(file io.Reader) *excel {
 	var (
@@ -22,7 +26,7 @@ func ReadFormFile(file io.Reader) *excel {
 	return &e
 }
 
-func (e *excel) GetData(sheetName string, model interface{}) (results []Result) {
+func (e *excel) Import(sheetName string, data Importable) (results []Result) {
 	var (
 		err  error
 		rows *excelize.Rows
@@ -31,29 +35,36 @@ func (e *excel) GetData(sheetName string, model interface{}) (results []Result) 
 		panic(err)
 	}
 
-	typ := reflect.TypeOf(model)
-	val := reflect.ValueOf(model)
+	typ := reflect.TypeOf(data)
+	val := reflect.ValueOf(data)
 	if typ.Kind() != reflect.Struct {
 		panic(errors.New("generate function support Struct only"))
 	}
 
-	var headers []string
-	headerValidate := make(map[string][]string)
+	// 获取结构体中应对的
+	var (
+		headers          []string
+		dataConvert      = make(map[string]string)
+		headerStructName = make(map[string]string)
+	)
+
 	for j := 0; j < typ.NumField(); j++ {
 		field := val.Type().Field(j)
 
 		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
 			headers = append(headers, hasTag)
-			validate := field.Tag.Get("validate")
-			headerValidate[hasTag] = strings.Split(validate, " ")
+
+			convTag := field.Tag.Get("excel-conv")
+			if convTag != "" {
+				headerStructName[hasTag] = convTag
+			}
 		}
 	}
 
 	var (
 		row         int
 		headerFound bool
-		validateMap = make(map[int][]string)
 	)
 	for rows.Next() {
 		row++
@@ -62,35 +73,65 @@ func (e *excel) GetData(sheetName string, model interface{}) (results []Result) 
 			panic(err)
 		}
 
+		// 寻找表头，并将行数与关联存于map作为缓存
 		if !headerFound {
 			headerFound = reflect.DeepEqual(columns, headers)
-			if headerFound {
-				for index, col := range columns {
-					validateMap[index] = headerValidate[col]
-				}
-			}
 
 			continue
 		}
 
+		// 将值加入结构体
 		for index, col := range columns {
-			var errInfo []string
-			for _, vTag := range validateMap[index] {
-				var trans string
-				if err, trans = validatorx.New().Val(col, vTag); nil != err {
-					errInfo = append(errInfo, headers[index]+trans)
+			field := val.Elem().FieldByName(headerStructName[headers[index]])
+
+			if v, ok := dataConvert[col]; ok {
+				if r := val.MethodByName(v).Call(nil); len(r) <= 1 {
+					panic(errors.New("convert method call error"))
+				} else {
+					field.Set(r[0])
 				}
-
+			} else {
+				switch field.Kind() {
+				case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
+					var i int64
+					if i, err = strconv.ParseInt(col, 10, 64); nil != err {
+						panic(i)
+					}
+					field.SetInt(i)
+				case reflect.String:
+					field.SetString(col)
+				}
 			}
 
-			if len(errInfo) > 0 {
-				results = append(results, Result{
-					ErrorRow:     row,
-					ErrorRowData: columns,
-					ErrorInfo:    errInfo,
-				})
-			}
 		}
+
+		if info := importData(data); len(info) > 0 {
+			results = append(results, Result{
+				ErrorRow:     row,
+				ErrorRowData: columns,
+				ErrorInfo:    info,
+			})
+		}
+	}
+
+	return
+}
+
+func importData(data Importable) (errInfo []string) {
+	// 验证结构体数据是否合法
+	if err, m := validatorx.New().Struct(data); nil != err {
+		for _, v := range m {
+			errInfo = append(errInfo, v)
+		}
+
+		return
+	}
+
+	// 执行导入业务
+	if err := data.Import(); err != nil {
+		errInfo = append(errInfo, err.Error())
+
+		return
 	}
 
 	return

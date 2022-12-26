@@ -13,7 +13,7 @@ func initTranslation(validate *validator.Validate, chinese ut.Translator) (err e
 			return ut.Add("id_card", "身份证不符合规范", true)
 		},
 		func(ut ut.Translator, fe validator.FieldError) string {
-			t, _ := ut.T("id_card", fe.Field())
+			t, _ := ut.T("id_card")
 			return t
 		},
 	); nil != err {

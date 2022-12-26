@@ -47,9 +47,7 @@ func newValidate() (err error) {
 }
 
 func (v *V) Struct(i interface{}) (error, map[string]string) {
-
 	if err := v.validate.Struct(i); err != nil {
-
 		return err, err.(validator.ValidationErrors).Translate(v.chinese)
 	}
 
