@@ -32,9 +32,19 @@ func (r *Result) Close() error {
 }
 
 // SetResults 该方法会清除已经导入成功的数据。并将错误数据保留以及将错误原因写入原文件中
-func (f *file) SetResults(sheetName string, result *Result) {
-	// 去除
+func (f *file) SetResults(sheetName string, result *Result) *file {
+	// 去除原始表
 	f.excel().DeleteSheet(sheetName)
 
-	f.StreamImport(result, SetName(sheetName), SetHeader(append(result.Header, "错误原因")), SetNotice(result.Notice))
+	// 流式导入数据
+	if err := f.StreamImport(
+		result,
+		SetName(sheetName),
+		SetHeader(append(result.Header, "错误原因")),
+		SetNotice(result.Notice),
+	); err != nil {
+		panic(err)
+	}
+
+	return f
 }

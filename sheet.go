@@ -79,6 +79,8 @@ func SetNotice(notice string) SheetOption {
 	}
 }
 
+// SetData for few data,if you want to create big sheet,
+// using
 func SetData(data [][]any) SheetOption {
 	return func(s *Sheet) {
 		s.Data = data

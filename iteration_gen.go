@@ -33,6 +33,7 @@ func (f *file) StreamImport(i Iteration, option ...SheetOption) (err error) {
 				return errors.New("please set sheet name")
 			}
 
+			//设置默认样式
 			if err = f.setDefaultSheetStyle(s); err != nil {
 				return
 			}

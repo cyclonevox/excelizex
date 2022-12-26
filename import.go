@@ -118,8 +118,6 @@ func (f *file) Import(sheetName string, data Importable) Result {
 		}
 	}
 
-	results.MaxRow = row
-
 	return results
 }
 
