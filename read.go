@@ -9,10 +9,6 @@ import (
 	"strconv"
 )
 
-type Importable interface {
-	ImportData() error
-}
-
 func ReadFormFile(reader io.Reader) *file {
 	var (
 		err error
@@ -26,10 +22,15 @@ func ReadFormFile(reader io.Reader) *file {
 	return &f
 }
 
-func (f *file) Import(sheetName string, data Importable) (results []Result) {
+type Importable interface {
+	ImportData() error
+}
+
+func (f *file) Import(sheetName string, data Importable) Result {
 	var (
-		err  error
-		rows *excelize.Rows
+		results Result
+		rows    *excelize.Rows
+		err     error
 	)
 	if rows, err = f.excel().Rows(sheetName); err != nil {
 		panic(err)
@@ -76,6 +77,8 @@ func (f *file) Import(sheetName string, data Importable) (results []Result) {
 		// 寻找表头，并将行数与关联存于map作为缓存
 		if !headerFound {
 			headerFound = reflect.DeepEqual(columns, headers)
+			results.Header = headers
+			results.DataStartRow = row
 
 			continue
 		}
@@ -106,15 +109,18 @@ func (f *file) Import(sheetName string, data Importable) (results []Result) {
 		}
 
 		if info := importData(data); len(info) > 0 {
-			results = append(results, Result{
-				ErrorRow:     row,
-				ErrorRowData: columns,
-				ErrorInfo:    info,
+			results.Errors = append(results.Errors, ErrorInfo{
+				ErrorRow:  row,
+				ErrorInfo: info,
 			})
+
+			continue
 		}
 	}
 
-	return
+	results.MaxRow = row
+
+	return results
 }
 
 func importData(data Importable) (errInfo []string) {

@@ -73,6 +73,12 @@ func SetHeader(header []string) SheetOption {
 	}
 }
 
+func SetNotice(notice string) SheetOption {
+	return func(s *Sheet) {
+		s.Notice = notice
+	}
+}
+
 func SetData(data [][]any) SheetOption {
 	return func(s *Sheet) {
 		s.Data = data

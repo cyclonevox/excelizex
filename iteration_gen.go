@@ -30,7 +30,11 @@ func (f *file) StreamImport(i Iteration, option ...SheetOption) (err error) {
 			f.AddSheets(s)
 
 			if s.Name == "" {
-				panic(errors.New("please set sheet name"))
+				return errors.New("please set sheet name")
+			}
+
+			if err = f.setDefaultSheetStyle(s); err != nil {
+				return
 			}
 
 			if sw, err = f.excel().NewStreamWriter(s.Name); err != nil {
