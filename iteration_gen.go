@@ -13,7 +13,7 @@ type Iteration interface {
 }
 
 // StreamImport 通过调用迭代器接口，并且使用
-func (e *excel) StreamImport(i Iteration, option ...SheetOption) (err error) {
+func (f *file) StreamImport(i Iteration, option ...SheetOption) (err error) {
 	var (
 		sw        *excelize.StreamWriter
 		beginAxis int64
@@ -27,13 +27,13 @@ func (e *excel) StreamImport(i Iteration, option ...SheetOption) (err error) {
 			for _, o := range option {
 				o(&s)
 			}
-			e.AddSheets(s)
+			f.AddSheets(s)
 
 			if s.Name == "" {
 				panic(errors.New("please set sheet name"))
 			}
 
-			if sw, err = e.getFile().NewStreamWriter(s.Name); err != nil {
+			if sw, err = f.excel().NewStreamWriter(s.Name); err != nil {
 				return
 			}
 

@@ -22,7 +22,7 @@ func genSheet(a any, name ...string) (Sheet Sheet) {
 	for i := 0; i < typ.NumField(); i++ {
 		typeField := typ.Field(i)
 
-		headerName := typeField.Tag.Get("excel")
+		headerName := typeField.Tag.Get("file")
 		if headerName == "" {
 			continue
 		} else {
@@ -44,7 +44,7 @@ func genSingleData(single any) (list []any) {
 	for j := 0; j < typ.NumField(); j++ {
 		field := typ.Field(j)
 
-		hasTag := field.Tag.Get("excel")
+		hasTag := field.Tag.Get("file")
 		if hasTag != "" {
 			list = append(list, val.Field(j).Interface())
 		}

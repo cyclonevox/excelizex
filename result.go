@@ -6,6 +6,6 @@ type Result struct {
 	ErrorInfo    []string
 }
 
-func (e *excel) name() {
+func (f *file) name() {
 
 }

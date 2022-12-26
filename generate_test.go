@@ -6,9 +6,9 @@ import (
 )
 
 type testStruct struct {
-	Name      string `excel:"名称" json:"sheet"`
-	Sex       int    `excel:"性别" json:"sex"`
-	HelloWord string `excel:"测试" json:"helloWord"`
+	Name      string `file:"名称" json:"sheet"`
+	Sex       int    `file:"性别" json:"sex"`
+	HelloWord string `file:"测试" json:"helloWord"`
 }
 
 func TestGen(t *testing.T) {

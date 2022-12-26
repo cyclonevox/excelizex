@@ -40,7 +40,7 @@ func (s *Sheet) SetData(data [][]any) {
 	s.Data = data
 }
 
-func (s *Sheet) Excel() *excel {
+func (s *Sheet) Excel() *file {
 	if s.Name == "" {
 		panic("need a sheet name at least")
 	}

@@ -13,25 +13,25 @@ type Importable interface {
 	ImportData() error
 }
 
-func ReadFormFile(file io.Reader) *excel {
+func ReadFormFile(reader io.Reader) *file {
 	var (
-		e   excel
 		err error
+		f   file
 	)
 
-	if e._excel, err = excelize.OpenReader(file); err != nil {
+	if f._excel, err = excelize.OpenReader(reader); err != nil {
 		panic(err)
 	}
 
-	return &e
+	return &f
 }
 
-func (e *excel) Import(sheetName string, data Importable) (results []Result) {
+func (f *file) Import(sheetName string, data Importable) (results []Result) {
 	var (
 		err  error
 		rows *excelize.Rows
 	)
-	if rows, err = e.getFile().Rows(sheetName); err != nil {
+	if rows, err = f.excel().Rows(sheetName); err != nil {
 		panic(err)
 	}
 
@@ -51,11 +51,11 @@ func (e *excel) Import(sheetName string, data Importable) (results []Result) {
 	for j := 0; j < typ.NumField(); j++ {
 		field := val.Type().Field(j)
 
-		hasTag := field.Tag.Get("excel")
+		hasTag := field.Tag.Get("file")
 		if hasTag != "" {
 			headers = append(headers, hasTag)
 
-			convTag := field.Tag.Get("excel-conv")
+			convTag := field.Tag.Get("file-conv")
 			if convTag != "" {
 				headerStructName[hasTag] = convTag
 			}

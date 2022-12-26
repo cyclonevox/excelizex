@@ -4,21 +4,25 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-type excel struct {
+type file struct {
 	_excel *excelize.File
 }
 
-func New() *excel {
-	return &excel{_excel: excelize.NewFile()}
+func New() *file {
+	return &file{_excel: excelize.NewFile()}
 }
 
-func (e *excel) getFile() *excelize.File {
-	return e._excel
+func (f *file) excel() *excelize.File {
+	return f._excel
 }
 
-func (e *excel) AddSheets(sheets ...Sheet) *excel {
+func (f *file) Save() {
+	f.excel().Save()
+}
+
+func (f *file) AddSheets(sheets ...Sheet) *file {
 	var (
-		_excel = e.getFile()
+		_excel = f.excel()
 		err    error
 	)
 
@@ -26,7 +30,7 @@ func (e *excel) AddSheets(sheets ...Sheet) *excel {
 		if s.Name == "" {
 			panic("need a sheet name at least")
 		}
-		e._excel.NewSheet(s.Name)
+		f._excel.NewSheet(s.Name)
 
 		// 设置表各列数据格式 数字默认为“文本”
 		for i := range s.Header {
@@ -35,7 +39,7 @@ func (e *excel) AddSheets(sheets ...Sheet) *excel {
 				panic(err)
 			}
 
-			if err = _excel.SetColStyle(s.Name, colName, e.StyleNumFmtText()); nil != err {
+			if err = _excel.SetColStyle(s.Name, colName, f.StyleNumFmtText()); nil != err {
 				panic(err)
 			}
 		}
@@ -46,7 +50,7 @@ func (e *excel) AddSheets(sheets ...Sheet) *excel {
 			if err = _excel.SetCellValue(s.Name, row, s.Notice); err != nil {
 				panic(err)
 			}
-			if err = _excel.SetCellStyle(s.Name, row, row, e.StyleRedTextLocked()); nil != err {
+			if err = _excel.SetCellStyle(s.Name, row, row, f.StyleRedTextLocked()); nil != err {
 				panic(err)
 			}
 		}
@@ -57,11 +61,11 @@ func (e *excel) AddSheets(sheets ...Sheet) *excel {
 			if err = _excel.SetSheetRow(s.Name, row, &s.Header); err != nil {
 				panic(err)
 			}
-			if err = _excel.SetRowStyle(s.Name, s.writeRow, s.writeRow, e.StyleLocked()); err != nil {
+			if err = _excel.SetRowStyle(s.Name, s.writeRow, s.writeRow, f.StyleLocked()); err != nil {
 				panic(err)
 			}
 		}
 	}
 
-	return e
+	return f
 }
