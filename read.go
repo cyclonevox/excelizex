@@ -10,7 +10,7 @@ import (
 )
 
 type Importable interface {
-	Import() error
+	ImportData() error
 }
 
 func ReadFormFile(file io.Reader) *excel {
@@ -128,7 +128,7 @@ func importData(data Importable) (errInfo []string) {
 	}
 
 	// 执行导入业务
-	if err := data.Import(); err != nil {
+	if err := data.ImportData(); err != nil {
 		errInfo = append(errInfo, err.Error())
 
 		return

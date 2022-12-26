@@ -20,5 +20,19 @@ func initTranslation(validate *validator.Validate, chinese ut.Translator) (err e
 		return
 	}
 
+	if err = validate.RegisterTranslation(
+		"mobile",
+		chinese,
+		func(ut ut.Translator) error {
+			return ut.Add("mobile", "手机号不符合规范", true)
+		},
+		func(ut ut.Translator, fe validator.FieldError) string {
+			t, _ := ut.T("mobile")
+			return t
+		},
+	); nil != err {
+		return
+	}
+
 	return
 }
