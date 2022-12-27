@@ -80,8 +80,7 @@ func SetNotice(notice string) SheetOption {
 	}
 }
 
-// SetData for few data,if you want to create big sheet,
-// using
+// SetData for 仅作为少量数据写入.如果需要写入大量数据 请使用StreamWriteIn() 以调用excelize的流式写入.
 func SetData(data [][]any) SheetOption {
 	return func(s *Sheet) {
 		s.Data = data

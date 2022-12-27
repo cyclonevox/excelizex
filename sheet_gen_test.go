@@ -6,9 +6,21 @@ import (
 )
 
 type testStruct struct {
-	Name      string `file:"名称" json:"sheet"`
-	Sex       int    `file:"性别" json:"sex"`
-	HelloWord string `file:"测试" json:"helloWord"`
+	Name       string `excel:"名称" json:"sheet"`
+	Sex        string `excel:"性别" json:"sex"`
+	HelloWorld string `excel:"测试" json:"helloWorld"`
+}
+
+type testStructs []testStruct
+
+func (t testStructs) ToStrings() [][]string {
+	var ss [][]string
+
+	for _, ts := range t {
+		ss = append(ss, []string{ts.Name, ts.Sex, ts.HelloWorld})
+	}
+
+	return ss
 }
 
 func TestGen(t *testing.T) {
@@ -28,15 +40,15 @@ func TestGen(t *testing.T) {
 func TestSliceGen(t *testing.T) {
 	t.Run("TestGen", func(t *testing.T) {
 		ttt := []testStruct{
-			{"123", 123, "456"},
-			{"456", 231, "213"},
+			{"123", "男", "456"},
+			{"456", "女", "213"},
 		}
 
 		var expectSheet = Sheet{
 			Header: []string{"名称", "性别", "测试"},
 			Data: [][]any{
-				{"123", 123, "456"},
-				{"456", 231, "213"},
+				{"123", "男", "456"},
+				{"456", "女", "213"},
 			},
 		}
 		sheet := Gen(ttt)

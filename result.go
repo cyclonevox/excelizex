@@ -37,7 +37,7 @@ func (f *file) SetResults(sheetName string, result *Result) *file {
 	f.excel().DeleteSheet(sheetName)
 
 	// 流式导入数据
-	if err := f.StreamImport(
+	if err := f.StreamWriteIn(
 		result,
 		SetName(sheetName),
 		SetHeader(append(result.Header, "错误原因")),

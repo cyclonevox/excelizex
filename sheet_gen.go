@@ -44,7 +44,7 @@ func genSingleData(single any) (list []any) {
 	for j := 0; j < typ.NumField(); j++ {
 		field := typ.Field(j)
 
-		hasTag := field.Tag.Get("file")
+		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
 			list = append(list, val.Field(j).Interface())
 		}

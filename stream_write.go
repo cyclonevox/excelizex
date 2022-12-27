@@ -6,14 +6,16 @@ import (
 	"strconv"
 )
 
-type Iteration interface {
+type StreamWritable interface {
 	Next() bool
 	Data() any
 	Close() error
 }
 
-// StreamImport 通过调用迭代器接口，并且使用
-func (f *file) StreamImport(i Iteration, option ...SheetOption) (err error) {
+// StreamWriteIn 通过调用迭代器接口为excel文件来生成表.
+// 迭代器接口中的 Data() 返回返回的值的结构体来作为生成表的头.
+// option 可设定表，需要注意的是，必须设定表名称.
+func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error) {
 	var (
 		sw        *excelize.StreamWriter
 		beginAxis int64
