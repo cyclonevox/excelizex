@@ -52,11 +52,11 @@ func (f *file) Import(sheetName string, data Importable) Result {
 	for j := 0; j < typ.NumField(); j++ {
 		field := val.Type().Field(j)
 
-		hasTag := field.Tag.Get("file")
+		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
 			headers = append(headers, hasTag)
 
-			convTag := field.Tag.Get("file-conv")
+			convTag := field.Tag.Get("excel-conv")
 			if convTag != "" {
 				headerStructName[hasTag] = convTag
 			}
