@@ -22,11 +22,9 @@ func ReadFormFile(reader io.Reader) *file {
 	return &f
 }
 
-type Importable interface {
-	ImportData() error
-}
+type ImportFunc func(any) error
 
-func (f *file) Read(sheetName string, data Importable) Result {
+func (f *file) Read(sheetName string, data any, fn ImportFunc) Result {
 	var (
 		results Result
 		rows    *excelize.Rows
@@ -113,7 +111,7 @@ func (f *file) Read(sheetName string, data Importable) Result {
 			}
 		}
 
-		if info := importData(data); len(info) > 0 {
+		if info := importData(data, fn); len(info) > 0 {
 			results.Errors = append(results.Errors, ErrorInfo{
 				ErrorRow:  row,
 				ErrorInfo: info,
@@ -126,7 +124,7 @@ func (f *file) Read(sheetName string, data Importable) Result {
 	return results
 }
 
-func importData(data Importable) (errInfo []string) {
+func importData(data any, fn ImportFunc) (errInfo []string) {
 	// 验证结构体数据是否合法
 	if err, m := validatorx.New().Struct(data); nil != err {
 		for _, v := range m {
@@ -137,7 +135,7 @@ func importData(data Importable) (errInfo []string) {
 	}
 
 	// 执行导入业务
-	if err := data.ImportData(); err != nil {
+	if err := fn(data); err != nil {
 		errInfo = append(errInfo, err.Error())
 
 		return
