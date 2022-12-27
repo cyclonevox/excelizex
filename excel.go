@@ -29,7 +29,7 @@ func (f *file) AddSheets(sheets ...Sheet) *file {
 		}
 		f._excel.NewSheet(s.Name)
 
-		if err = f.setDefaultFormatSheetAndStyle(s); err != nil {
+		if err = f.setDefaultFormatSheetAndStyle(&s); err != nil {
 			panic(err)
 		}
 	}
@@ -37,7 +37,7 @@ func (f *file) AddSheets(sheets ...Sheet) *file {
 	return f
 }
 
-func (f *file) setDefaultFormatSheetAndStyle(s Sheet) (err error) {
+func (f *file) setDefaultFormatSheetAndStyle(s *Sheet) (err error) {
 	_excel := f.excel()
 
 	// 设置表各列数据格式 数字默认为“文本”

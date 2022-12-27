@@ -47,7 +47,7 @@ func TestFile_StreamWriteIn(t *testing.T) {
 		t.Fatal("TestFile_StreamWriteIn:", "获取数据表行:", err)
 	}
 
-	expectData := testStructs(testData).ToExpectStrings()
+	expectData := testStructs(testData).ToExpectData()
 
 	if !reflect.DeepEqual(expectData, rows) {
 		t.Fatalf("Expect:%+v,but%+v", expectData, rows)

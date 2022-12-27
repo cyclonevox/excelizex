@@ -2,7 +2,7 @@ package excelizex
 
 type Result struct {
 	sector       int
-	DataStartRow int
+	dataStartRow int
 	SheetName    string
 	Notice       string
 	Header       []string
@@ -16,8 +16,7 @@ type ErrorInfo struct {
 }
 
 func (r *Result) Next() bool {
-	r.sector++
-	return len(r.Errors) >= r.sector
+	return len(r.Errors) >= r.sector+1
 }
 
 func (r *Result) Data() any {
@@ -31,15 +30,15 @@ func (r *Result) Close() error {
 	return nil
 }
 
-// SetResults 该方法会清除已经导入成功的数据。并将错误数据保留以及将错误原因写入原文件中
-func (f *file) SetResults(sheetName string, result *Result) *file {
+// SetResults 该方法会清除原始的表。并将错误数据保留以及将错误原因写入原文件中
+func (f *file) SetResults(result *Result) *file {
 	// 去除原始表
-	f.excel().DeleteSheet(sheetName)
+	f.excel().DeleteSheet(result.SheetName)
 
 	// 流式导入数据
 	if err := f.StreamWriteIn(
 		result,
-		SetName(sheetName),
+		SetName(result.SheetName),
 		SetHeader(append(result.Header, "错误原因")),
 		SetNotice(result.Notice),
 	); err != nil {

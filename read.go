@@ -26,7 +26,7 @@ type Importable interface {
 	ImportData() error
 }
 
-func (f *file) Import(sheetName string, data Importable) Result {
+func (f *file) Read(sheetName string, data Importable) Result {
 	var (
 		results Result
 		rows    *excelize.Rows
@@ -78,7 +78,7 @@ func (f *file) Import(sheetName string, data Importable) Result {
 		if !headerFound {
 			headerFound = reflect.DeepEqual(columns, headers)
 			results.Header = headers
-			results.DataStartRow = row
+			results.dataStartRow = row
 
 			continue
 		}

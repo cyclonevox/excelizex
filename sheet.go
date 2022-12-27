@@ -1,6 +1,10 @@
 package excelizex
 
-import "strconv"
+import (
+	"errors"
+	"reflect"
+	"strconv"
+)
 
 type Sheet struct {
 	// 表名
@@ -32,15 +36,31 @@ func (s *Sheet) SetNotice(notice string) {
 	s.Notice = notice
 }
 
-// SetHeader 中的会有override参数 是由于可能会使用Gen等方法来生成表头，
-// 误操作 调用该方法时，对原来的表头进行了覆盖，
-// 则 override 为 true时则会强行覆盖
-func (s *Sheet) SetHeader(header []string, override ...bool) {
-	if len(override) > 0 && override[0] {
-		s.Header = header
-	} else if len(header) == 0 {
-		s.Header = header
+// SetHeader 为手动设置表的头部
+func (s *Sheet) SetHeader(header []string) {
+	s.Header = header
+}
+
+// SetHeaderByStruct 方法会检测结构体中的excel标签，以获取结构体表头
+func (s *Sheet) SetHeaderByStruct(a any) *Sheet {
+	typ := reflect.TypeOf(a)
+
+	if typ.Kind() != reflect.Struct {
+		panic(errors.New("generate function support using struct only"))
 	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		typeField := typ.Field(i)
+
+		headerName := typeField.Tag.Get("excel")
+		if headerName == "" {
+			continue
+		} else {
+			s.Header = append(s.Header, headerName)
+		}
+	}
+
+	return s
 }
 
 func (s *Sheet) SetData(data [][]any) {
@@ -75,14 +95,30 @@ func SetName(name string) SheetOption {
 	}
 }
 
-// SetHeader 中的会有override参数 是由于可能会使用Gen等方法来生成表头，
-// 误操作 调用该方法时，对原来的表头进行了覆盖，
-func SetHeader(header []string, override ...bool) SheetOption {
+func SetHeader(header []string) SheetOption {
 	return func(s *Sheet) {
-		if len(override) > 0 && override[0] {
-			s.Header = header
-		} else if len(header) == 0 {
-			s.Header = header
+		s.Header = header
+	}
+}
+
+// SetHeaderByStruct 会根据
+func SetHeaderByStruct(a any) SheetOption {
+	return func(s *Sheet) {
+		typ := reflect.TypeOf(a)
+
+		if typ.Kind() != reflect.Struct {
+			panic(errors.New("generate function support using struct only"))
+		}
+
+		for i := 0; i < typ.NumField(); i++ {
+			typeField := typ.Field(i)
+
+			headerName := typeField.Tag.Get("excel")
+			if headerName == "" {
+				continue
+			} else {
+				s.Header = append(s.Header, headerName)
+			}
 		}
 	}
 }

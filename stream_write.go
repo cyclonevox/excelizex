@@ -13,28 +13,30 @@ type StreamWritable interface {
 }
 
 // StreamWriteIn 通过调用迭代器接口为excel文件来生成表.
-// 迭代器接口中的 Data() 返回返回的值的结构体来作为生成表的头.
+// 迭代器接口中的 Data() 返回返回的值的结构体来作为生成表的头.时无需用传入option手动设置表头
 // option 可设定表，需要注意的是，必须设定表名称.
 func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error) {
 	var (
-		s         Sheet
+		s         *Sheet
 		sw        *excelize.StreamWriter
 		beginAxis int64
 	)
 
 	for j := 0; i.Next(); j++ {
-		result := i.Data()
+		d := i.Data()
 
 		if j == 0 {
-			s = genSheet(result)
-			for _, o := range option {
-				o(&s)
+			s = NewSheet(option...)
+			// 检测到未包含header设置则会使用 SetHeaderByStruct 获取数据中结构体的header元素
+			if len(s.Header) == 0 {
+				s = s.SetHeaderByStruct(d)
 			}
-			f.AddSheets(s)
-
+			// 未包含名称则错误
 			if s.Name == "" {
-				return errors.New("please set sheet name")
+				return errors.New("plz set sheet name")
 			}
+
+			f.AddSheets(*s)
 
 			if sw, err = f.excel().NewStreamWriter(s.Name); err != nil {
 				return
@@ -47,7 +49,7 @@ func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 			}
 		}
 
-		if err = sw.SetRow("A"+strconv.FormatInt(beginAxis, 10), genSingleData(result)); err != nil {
+		if err = sw.SetRow("A"+strconv.FormatInt(beginAxis, 10), singleRowData(d)); err != nil {
 			return
 		}
 

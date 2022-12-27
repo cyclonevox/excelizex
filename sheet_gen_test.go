@@ -8,7 +8,7 @@ import (
 var (
 	testName   = "test_sheet"
 	testNotice = "test_sheet_notice"
-	testHeader = []string{"test1", "test2", "test3"}
+	testHeader = []string{"名称", "性别", "测试"}
 )
 
 type testStruct struct {
@@ -19,7 +19,7 @@ type testStruct struct {
 
 type testStructs []testStruct
 
-func (t testStructs) ToExpectStrings() [][]string {
+func (t testStructs) ToExpectData() [][]string {
 	var ss [][]string
 
 	ss = append(ss, []string{testNotice})
@@ -34,10 +34,10 @@ func (t testStructs) ToExpectStrings() [][]string {
 func TestGen(t *testing.T) {
 	t.Run("TestGen", func(t *testing.T) {
 		var ttt testStruct
-		var expectSheet = Sheet{
+		var expectSheet = &Sheet{
 			Header: []string{"名称", "性别", "测试"},
 		}
-		sheet := genSheet(ttt)
+		sheet := NewSheet().SetHeaderByStruct(ttt)
 
 		if !reflect.DeepEqual(expectSheet, sheet) {
 			t.Fatalf("expect %+v,but %+v", expectSheet, sheet)
@@ -52,7 +52,7 @@ func TestSliceGen(t *testing.T) {
 			{"456", "女", "213"},
 		}
 
-		var expectSheet = Sheet{
+		var expectSheet = &Sheet{
 			Header: []string{"名称", "性别", "测试"},
 			Data: [][]any{
 				{"123", "男", "456"},

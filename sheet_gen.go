@@ -5,58 +5,46 @@ import (
 	"reflect"
 )
 
-func genSheet(a any, name ...string) (Sheet Sheet) {
-	if a == nil {
-		return
-	}
-	typ := reflect.TypeOf(a)
-
-	if typ.Kind() != reflect.Struct {
-		panic(errors.New("generate function support using struct only"))
-	}
-
-	if len(name) != 0 {
-		Sheet.Name = name[0]
-	}
-
-	var headers []string
-	for i := 0; i < typ.NumField(); i++ {
-		typeField := typ.Field(i)
-
-		headerName := typeField.Tag.Get("excel")
-		if headerName == "" {
-			continue
-		} else {
-			headers = append(headers, headerName)
-		}
-	}
-	Sheet.SetHeader(headers, true)
-
-	return
-}
-
-func genSingleData(single any) (list []any) {
+func singleRowData(single any) (list []any) {
 	typ := reflect.TypeOf(single)
 	val := reflect.ValueOf(single)
 
-	if typ.Kind() != reflect.Struct {
-		panic(errors.New("generate function support using struct payload single only"))
-	}
+	switch typ.Kind() {
+	// 对于结构体会获取含有excel结构体的数值
+	case reflect.Struct:
+		for j := 0; j < typ.NumField(); j++ {
+			field := typ.Field(j)
 
-	for j := 0; j < typ.NumField(); j++ {
-		field := typ.Field(j)
+			hasTag := field.Tag.Get("excel")
+			if hasTag != "" {
+				list = append(list, val.Field(j).Interface())
+			}
+		}
 
-		hasTag := field.Tag.Get("excel")
-		if hasTag != "" {
-			list = append(list, val.Field(j).Interface())
+	// 对于切片类型会直接转为[]any
+	// 只支持int string float类型的切片
+	case reflect.Slice:
+		slice := reflect.MakeSlice(typ, typ.Len(), typ.Len())
+		for j := 0; j < typ.Len(); j++ {
+			s := slice.Index(j)
+
+			switch s.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Float64, reflect.Float32, reflect.String:
+				list = append(list, s.Interface())
+			default:
+				panic(errors.New("do not support slice type beside int, float64 or string"))
+			}
+
 		}
 	}
 
 	return
 }
 
-// Gen can use input slice variable generate sheet
-func Gen(slice any, name ...string) (Sheet Sheet) {
+// Gen can use input slice to generate sheet
+// This function just support simple data sheet
+func Gen(slice any, option ...SheetOption) (Sheet *Sheet) {
 	typ := reflect.TypeOf(slice)
 	val := reflect.ValueOf(slice)
 
@@ -66,10 +54,10 @@ func Gen(slice any, name ...string) (Sheet Sheet) {
 
 	for i := 0; i < val.Len(); i++ {
 		if i == 0 {
-			Sheet = genSheet(val.Index(i).Interface(), name...)
+			Sheet = NewSheet(option...).SetHeaderByStruct(val.Index(i).Interface())
 		}
 
-		Sheet.Data = append(Sheet.Data, genSingleData(val.Index(i).Interface()))
+		Sheet.Data = append(Sheet.Data, singleRowData(val.Index(i).Interface()))
 	}
 
 	return
