@@ -52,7 +52,7 @@ func TestSheet_writeRowIncrWrite(t *testing.T) {
 		t.Fatalf("expect %+v,but %+v", exceptRowName, testRowName)
 	}
 
-	newSheet.writeRowIncr(3)
+	testRowName = newSheet.writeRowIncr(3)
 	exceptRowName = "A4"
 
 	if testRowName != exceptRowName {
