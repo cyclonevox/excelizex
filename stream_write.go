@@ -17,6 +17,7 @@ type StreamWritable interface {
 // option 可设定表，需要注意的是，必须设定表名称.
 func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error) {
 	var (
+		s         Sheet
 		sw        *excelize.StreamWriter
 		beginAxis int64
 	)
@@ -25,7 +26,7 @@ func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 		result := i.Data()
 
 		if j == 0 {
-			s := genSheet(result)
+			s = genSheet(result)
 			for _, o := range option {
 				o(&s)
 			}
@@ -35,16 +36,11 @@ func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 				return errors.New("please set sheet name")
 			}
 
-			//设置默认格式
-			if err = f.setDefaultFormatSheetAndStyle(s); err != nil {
-				return
-			}
-
 			if sw, err = f.excel().NewStreamWriter(s.Name); err != nil {
 				return
 			}
 
-			if s.Notice != "" {
+			if s.Notice == "" {
 				beginAxis = 2
 			} else {
 				beginAxis = 3
@@ -58,7 +54,18 @@ func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 		beginAxis++
 	}
 
-	i.Close()
+	if err = i.Close(); err != nil {
+		return
+	}
 
-	return sw.Flush()
+	if err = sw.Flush(); err != nil {
+		return
+	}
+
+	// 最后将头和notice等文件设置
+	if err = f.setDefaultFormatSheetAndStyle(s); err != nil {
+		return
+	}
+
+	return
 }

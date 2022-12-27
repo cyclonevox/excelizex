@@ -32,8 +32,15 @@ func (s *Sheet) SetNotice(notice string) {
 	s.Notice = notice
 }
 
-func (s *Sheet) SetHeader(header []string) {
-	s.Header = header
+// SetHeader 中的会有override参数 是由于可能会使用Gen等方法来生成表头，
+// 误操作 调用该方法时，对原来的表头进行了覆盖，
+// 则 override 为 true时则会强行覆盖
+func (s *Sheet) SetHeader(header []string, override ...bool) {
+	if len(override) > 0 && override[0] {
+		s.Header = header
+	} else if len(header) == 0 {
+		s.Header = header
+	}
 }
 
 func (s *Sheet) SetData(data [][]any) {
@@ -68,9 +75,15 @@ func SetName(name string) SheetOption {
 	}
 }
 
-func SetHeader(header []string) SheetOption {
+// SetHeader 中的会有override参数 是由于可能会使用Gen等方法来生成表头，
+// 误操作 调用该方法时，对原来的表头进行了覆盖，
+func SetHeader(header []string, override ...bool) SheetOption {
 	return func(s *Sheet) {
-		s.Header = header
+		if len(override) > 0 && override[0] {
+			s.Header = header
+		} else if len(header) == 0 {
+			s.Header = header
+		}
 	}
 }
 

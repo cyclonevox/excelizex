@@ -5,12 +5,6 @@ import (
 	"testing"
 )
 
-var (
-	testName   = "test_sheet"
-	testNotice = "test_sheet notice"
-	testHeader = []string{"test1", "test2", "test3"}
-)
-
 func TestNewSheet(t *testing.T) {
 	expectSheet := &Sheet{
 		Name:   testName,

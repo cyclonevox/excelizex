@@ -5,6 +5,12 @@ import (
 	"testing"
 )
 
+var (
+	testName   = "test_sheet"
+	testNotice = "test_sheet_notice"
+	testHeader = []string{"test1", "test2", "test3"}
+)
+
 type testStruct struct {
 	Name       string `excel:"名称" json:"sheet"`
 	Sex        string `excel:"性别" json:"sex"`
@@ -13,9 +19,11 @@ type testStruct struct {
 
 type testStructs []testStruct
 
-func (t testStructs) ToStrings() [][]string {
+func (t testStructs) ToExpectStrings() [][]string {
 	var ss [][]string
 
+	ss = append(ss, []string{testNotice})
+	ss = append(ss, []string{"名称", "性别", "测试"})
 	for _, ts := range t {
 		ss = append(ss, []string{ts.Name, ts.Sex, ts.HelloWorld})
 	}

@@ -95,6 +95,12 @@ func (f *file) Import(sheetName string, data Importable) Result {
 				}
 			} else {
 				switch field.Kind() {
+				case reflect.Float32, reflect.Float64:
+					var i float64
+					if i, err = strconv.ParseFloat(col, 64); nil != err {
+						panic(i)
+					}
+					field.SetFloat(i)
 				case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
 					var i int64
 					if i, err = strconv.ParseInt(col, 10, 64); nil != err {
@@ -105,7 +111,6 @@ func (f *file) Import(sheetName string, data Importable) Result {
 					field.SetString(col)
 				}
 			}
-
 		}
 
 		if info := importData(data); len(info) > 0 {

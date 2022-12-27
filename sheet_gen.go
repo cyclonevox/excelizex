@@ -19,16 +19,18 @@ func genSheet(a any, name ...string) (Sheet Sheet) {
 		Sheet.Name = name[0]
 	}
 
+	var headers []string
 	for i := 0; i < typ.NumField(); i++ {
 		typeField := typ.Field(i)
 
-		headerName := typeField.Tag.Get("file")
+		headerName := typeField.Tag.Get("excel")
 		if headerName == "" {
 			continue
 		} else {
-			Sheet.Header = append(Sheet.Header, headerName)
+			headers = append(headers, headerName)
 		}
 	}
+	Sheet.SetHeader(headers, true)
 
 	return
 }
