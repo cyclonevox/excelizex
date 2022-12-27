@@ -48,8 +48,9 @@ func (s *Sheet) Excel() *file {
 	return New().AddSheets(*s)
 }
 
+// writeRowIncr 会获取目前该写入的行
 // 每次调用该方法表示行数增长 返回 A1 A2... 等名称
-func (s *Sheet) writeRowName(num ...int) string {
+func (s *Sheet) writeRowIncr(num ...int) string {
 	if len(num) > 0 {
 		s.writeRow += num[0]
 	} else {

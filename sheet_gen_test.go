@@ -20,7 +20,7 @@ func TestGen(t *testing.T) {
 		sheet := genSheet(ttt)
 
 		if !reflect.DeepEqual(expectSheet, sheet) {
-			t.Fatalf("expect %s,but %s", expectSheet, sheet)
+			t.Fatalf("expect %+v,but %+v", expectSheet, sheet)
 		}
 	})
 }
@@ -42,7 +42,7 @@ func TestSliceGen(t *testing.T) {
 		sheet := Gen(ttt)
 
 		if !reflect.DeepEqual(expectSheet, sheet) {
-			t.Fatalf("expect %s,but %s", expectSheet, sheet)
+			t.Fatalf("expect %+v,but %+v", expectSheet, sheet)
 		}
 	})
 }
