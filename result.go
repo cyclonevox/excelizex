@@ -19,9 +19,10 @@ func (r *Result) Next() bool {
 	return len(r.Errors) >= r.sector+1
 }
 
-func (r *Result) Data() any {
-	info := r.Errors[r.sector]
-	return append(info.RawData, info.ErrorInfo...)
+func (r *Result) Data() (data any) {
+	data = append(r.Errors[r.sector].RawData, r.Errors[r.sector].ErrorInfo...)
+	r.sector++
+	return data
 }
 
 func (r *Result) Close() error {

@@ -14,12 +14,12 @@ func TestFile_SetResults(t *testing.T) {
 			{
 				ErrorRow:  2,
 				RawData:   []string{"测试人员1", "无", "123123123"},
-				ErrorInfo: []string{"性别只能时男或者女"},
+				ErrorInfo: []string{"性别只能是男或者女"},
 			},
 			{
 				ErrorRow:  3,
 				RawData:   []string{"测试人员2", "公", "helloWorld"},
-				ErrorInfo: []string{"性别只能时男或者女"},
+				ErrorInfo: []string{"性别只能是男或者女"},
 			},
 		},
 	}
@@ -31,12 +31,12 @@ func TestFile_SetResults(t *testing.T) {
 		t.Fatal("TestFile_SetResults:", " 表数据获取失败", err)
 	}
 
-	testData := []testStruct{
-		{"测试人员1", "男", "123123123"},
-		{"测试人员2", "男", "helloWorld"},
+	testData := []testErrStruct{
+		{"测试人员1", "无", "123123123", "性别只能是男或者女"},
+		{"测试人员2", "公", "helloWorld", "性别只能是男或者女"},
 	}
 
-	expectData := testStructs(testData).ToExpectData()
+	expectData := testErrStructs(testData).ToExpectData()
 	if !reflect.DeepEqual(expectData, rows) {
 		t.Fatalf("Expect:%+v,but%+v", expectData, rows)
 	}

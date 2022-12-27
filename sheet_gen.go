@@ -24,19 +24,13 @@ func singleRowData(single any) (list []any) {
 	// 对于切片类型会直接转为[]any
 	// 只支持int string float类型的切片
 	case reflect.Slice:
-		slice := reflect.MakeSlice(typ, typ.Len(), typ.Len())
-		for j := 0; j < typ.Len(); j++ {
-			s := slice.Index(j)
-
-			switch s.Kind() {
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-				reflect.Float64, reflect.Float32, reflect.String:
-				list = append(list, s.Interface())
-			default:
-				panic(errors.New("do not support slice type beside int, float64 or string"))
-			}
-
+		value := reflect.ValueOf(single)
+		rsp := make([]interface{}, 0, value.Len())
+		for i := 0; i < value.Len(); i++ {
+			rsp = append(rsp, value.Index(i).Interface())
 		}
+
+		return rsp
 	}
 
 	return
