@@ -5,7 +5,8 @@ import (
 )
 
 type file struct {
-	_excel *excelize.File
+	_excel  *excelize.File
+	convert map[string]ConvertFunc
 }
 
 func New() *file {

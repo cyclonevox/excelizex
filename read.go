@@ -22,6 +22,42 @@ func ReadFormFile(reader io.Reader) *file {
 	return &f
 }
 
+type ConvertFunc func(rawData string) (any, error)
+
+// SetConvert 作为设置该excel 文件的转换器
+// ConvertFunc 作为转换器函数 rawData 是指excel tag的对应的excel原始数据。
+//
+//	例如: type IdCard struct {
+//			Id   string `excel:"名称" excel-convert:"nameId"`
+//			...
+//		 }
+//
+// 调用 f.SetConvert("nameId", func(rawData string) (any, error){ return raw[:3],nil}) 设置转换器以后
+// 使用 excel-convert:"nameId" tag的字段都会在Read函数中调用相应的函数被转换
+func (f *file) SetConvert(convertName string, convertFunc ConvertFunc) *file {
+	if f.convert == nil {
+		f.convert = make(map[string]ConvertFunc)
+	}
+
+	f.convert[convertName] = convertFunc
+
+	return f
+}
+
+// SetConvertMap 可传入一个 key为convertName value为转换器函数的 map
+// 以达到一次传入多个 ConvertFunc 的效果，具体使用说明可见 SetConvert 方法注释
+func (f *file) SetConvertMap(convert map[string]ConvertFunc) *file {
+	if f.convert == nil {
+		f.convert = convert
+	} else {
+		for k, c := range convert {
+			f.convert[k] = c
+		}
+	}
+
+	return f
+}
+
 type ImportFunc func(any) error
 
 func (f *file) Read(sheetName string, data any, fn ImportFunc) Result {
@@ -85,30 +121,44 @@ func (f *file) Read(sheetName string, data any, fn ImportFunc) Result {
 		for index, col := range columns {
 			field := val.Elem().FieldByName(headerStructName[headers[index]])
 
+			// 查看该字段是否有转换器
 			if v, ok := dataConvert[col]; ok {
-				if r := val.MethodByName(v).Call(nil); len(r) <= 1 {
-					panic(errors.New("convert method call error"))
-				} else {
-					field.Set(r[0])
+				var convertValue any
+				if convertValue, err = f.convert[v](col); err != nil {
+					results.Errors = append(results.Errors, ErrorInfo{
+						ErrorRow:  row,
+						ErrorInfo: []string{err.Error()},
+					})
+
+					continue
 				}
-			} else {
-				switch field.Kind() {
-				case reflect.Float32, reflect.Float64:
-					var i float64
-					if i, err = strconv.ParseFloat(col, 64); nil != err {
-						panic(i)
-					}
-					field.SetFloat(i)
-				case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
-					var i int64
-					if i, err = strconv.ParseInt(col, 10, 64); nil != err {
-						panic(i)
-					}
-					field.SetInt(i)
-				case reflect.String:
-					field.SetString(col)
-				}
+
+				field = reflect.ValueOf(convertValue)
 			}
+
+			switch field.Kind() {
+			case reflect.Float32, reflect.Float64:
+				var i float64
+				if i, err = strconv.ParseFloat(col, 64); nil != err {
+					panic(i)
+				}
+				field.SetFloat(i)
+			case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
+				var i int64
+				if i, err = strconv.ParseInt(col, 10, 64); nil != err {
+					panic(i)
+				}
+				field.SetInt(i)
+			case reflect.String:
+				field.SetString(col)
+			default:
+				panic("cannot support other type besides int,float,string")
+			}
+
+		}
+
+		if len(results.Errors) > 0 {
+			continue
 		}
 
 		if info := importData(data, fn); len(info) > 0 {
