@@ -32,7 +32,7 @@ func (r *Result) Close() error {
 }
 
 // SetResults 该方法会清除原始的表。并将错误数据保留以及将错误原因写入原文件中
-func (f *file) SetResults(result *Result) *file {
+func (f *File) SetResults(result *Result) *File {
 	// 去除原始表
 	f.excel().DeleteSheet(result.SheetName)
 

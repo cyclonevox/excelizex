@@ -15,7 +15,7 @@ type StreamWritable interface {
 // StreamWriteIn 通过调用迭代器接口为excel文件来生成表.
 // 迭代器接口中的 Data() 返回返回的值的结构体来作为生成表的头.时无需用传入option手动设置表头
 // option 可设定表，需要注意的是，必须设定表名称.
-func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error) {
+func (f *File) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error) {
 	var (
 		s         *Sheet
 		sw        *excelize.StreamWriter

@@ -9,10 +9,10 @@ import (
 	"strconv"
 )
 
-func ReadFormFile(reader io.Reader) *file {
+func ReadFormFile(reader io.Reader) *File {
 	var (
 		err error
-		f   file
+		f   File
 	)
 
 	if f._excel, err = excelize.OpenReader(reader); err != nil {
@@ -34,7 +34,7 @@ type ConvertFunc func(rawData string) (any, error)
 //
 // 调用 f.SetConvert("nameId", func(rawData string) (any, error){ return raw[:3],nil}) 设置转换器以后
 // 使用 excel-convert:"nameId" tag的字段都会在Read函数中调用相应的函数被转换
-func (f *file) SetConvert(convertName string, convertFunc ConvertFunc) *file {
+func (f *File) SetConvert(convertName string, convertFunc ConvertFunc) *File {
 	if f.convert == nil {
 		f.convert = make(map[string]ConvertFunc)
 	}
@@ -46,7 +46,7 @@ func (f *file) SetConvert(convertName string, convertFunc ConvertFunc) *file {
 
 // SetConvertMap 可传入一个 key为convertName value为转换器函数的 map
 // 以达到一次传入多个 ConvertFunc 的效果，具体使用说明可见 SetConvert 方法注释
-func (f *file) SetConvertMap(convert map[string]ConvertFunc) *file {
+func (f *File) SetConvertMap(convert map[string]ConvertFunc) *File {
 	if f.convert == nil {
 		f.convert = convert
 	} else {
@@ -60,7 +60,7 @@ func (f *file) SetConvertMap(convert map[string]ConvertFunc) *file {
 
 type ImportFunc func(any) error
 
-func (f *file) Read(sheetName string, data any, fn ImportFunc) Result {
+func (f *File) Read(sheetName string, data any, fn ImportFunc) Result {
 	var (
 		results Result
 		rows    *excelize.Rows

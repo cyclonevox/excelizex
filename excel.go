@@ -6,38 +6,38 @@ import (
 	"io"
 )
 
-type file struct {
+type File struct {
 	_excel  *excelize.File
 	convert map[string]ConvertFunc
 }
 
-func New(reader ...io.Reader) *file {
+func New(reader ...io.Reader) *File {
 	if len(reader) > 0 {
 		if f, err := excelize.OpenReader(reader[0]); err != nil {
-			return &file{_excel: f}
+			return &File{_excel: f}
 		}
 	}
 
-	return &file{_excel: excelize.NewFile()}
+	return &File{_excel: excelize.NewFile()}
 }
 
-func (f *file) excel() *excelize.File {
+func (f *File) excel() *excelize.File {
 	return f._excel
 }
 
-func (f *file) SaveAs(name string) (err error) {
+func (f *File) SaveAs(name string) (err error) {
 	f.excel().DeleteSheet("Sheet1")
 
 	return f.excel().SaveAs(name)
 }
 
-func (f *file) Buffer() (*bytes.Buffer, error) {
+func (f *File) Buffer() (*bytes.Buffer, error) {
 	f.excel().DeleteSheet("Sheet1")
 
 	return f.excel().WriteToBuffer()
 }
 
-func (f *file) AddSheets(sheets ...*Sheet) *file {
+func (f *File) AddSheets(sheets ...*Sheet) *File {
 	var err error
 
 	for _, s := range sheets {
@@ -55,20 +55,20 @@ func (f *file) AddSheets(sheets ...*Sheet) *file {
 }
 
 // AddDataSheet support use slice and their data generate a sheet with header and data
-func (f *file) AddDataSheet(slice any, option ...SheetOption) *file {
+func (f *File) AddDataSheet(slice any, option ...SheetOption) *File {
 	f.AddSheets(genDataSheet(slice, option...))
 
 	return f
 }
 
 // AddSimpleSheet support use struct and their data generate a sheet with only header
-func (f *file) AddSimpleSheet(a any, option ...SheetOption) *file {
+func (f *File) AddSimpleSheet(a any, option ...SheetOption) *File {
 	f.AddSheets(NewSheet(option...).SetHeaderByStruct(a))
 
 	return f
 }
 
-func (f *file) setDefaultFormatSheetAndStyle(s *Sheet) (err error) {
+func (f *File) setDefaultFormatSheetAndStyle(s *Sheet) (err error) {
 	_excel := f.excel()
 
 	// 设置表各列数据格式 数字默认为“文本”

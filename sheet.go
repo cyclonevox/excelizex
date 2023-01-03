@@ -67,7 +67,7 @@ func (s *Sheet) SetData(data [][]any) {
 	s.Data = data
 }
 
-func (s *Sheet) Excel() *file {
+func (s *Sheet) Excel() *File {
 	if s.Name == "" {
 		panic("need a sheet name at least")
 	}
@@ -101,7 +101,7 @@ func SetHeader(header []string) SheetOption {
 	}
 }
 
-// SetHeaderByStruct 会根据
+// SetHeaderByStruct 会根据结构体的tag来生成表头
 func SetHeaderByStruct(a any) SheetOption {
 	return func(s *Sheet) {
 		typ := reflect.TypeOf(a)

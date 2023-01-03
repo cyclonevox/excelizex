@@ -2,7 +2,7 @@ package excelizex
 
 import "github.com/xuri/excelize/v2"
 
-func (f *file) StyleNumFmtText() int {
+func (f *File) StyleNumFmtText() int {
 	var (
 		style int
 		err   error
@@ -14,7 +14,7 @@ func (f *file) StyleNumFmtText() int {
 	return style
 }
 
-func (f *file) StyleRedTextLocked() int {
+func (f *File) StyleRedTextLocked() int {
 	var (
 		style int
 		err   error
@@ -34,7 +34,7 @@ func (f *file) StyleRedTextLocked() int {
 	return style
 }
 
-func (f *file) StyleLocked() int {
+func (f *File) StyleLocked() int {
 	var (
 		style int
 		err   error
