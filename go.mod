@@ -1,4 +1,4 @@
-module excelizex
+module github.com/cyclonevox/excelizex
 
 go 1.19
 
