@@ -2,7 +2,7 @@ package excelizex
 
 import (
 	"errors"
-	"excelizex/validatorx"
+	"github.com/cyclonevox/excelizex/validatorx"
 	"github.com/xuri/excelize/v2"
 	"io"
 	"reflect"
