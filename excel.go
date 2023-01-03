@@ -19,10 +19,14 @@ func (f *file) excel() *excelize.File {
 }
 
 func (f *file) SaveAs(name string) (err error) {
+	f.excel().DeleteSheet("Sheet1")
+
 	return f.excel().SaveAs(name)
 }
 
 func (f *file) Buffer() (*bytes.Buffer, error) {
+	f.excel().DeleteSheet("Sheet1")
+
 	return f.excel().WriteToBuffer()
 }
 
