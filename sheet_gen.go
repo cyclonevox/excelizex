@@ -36,14 +36,18 @@ func singleRowData(single any) (list []any) {
 	return
 }
 
-// Gen can use input slice to generate sheet
+// genDataSheet can use input slice to generate sheet
 // This function just support simple data sheet
-func Gen(slice any, option ...SheetOption) (Sheet *Sheet) {
+func genDataSheet(slice any, option ...SheetOption) (Sheet *Sheet) {
+	if slice != nil {
+		panic(errors.New("slice nil"))
+	}
+
 	typ := reflect.TypeOf(slice)
 	val := reflect.ValueOf(slice)
 
 	if typ.Kind() != reflect.Slice {
-		panic(errors.New("generate function support using struct only"))
+		panic(errors.New("generate sheet function by Data support using struct only"))
 	}
 
 	for i := 0; i < val.Len(); i++ {
@@ -57,8 +61,8 @@ func Gen(slice any, option ...SheetOption) (Sheet *Sheet) {
 	return
 }
 
-func (f *file) GenSheet(slice any, option ...SheetOption) *file {
-	f.AddSheets(Gen(slice, option...))
+func (f *file) GenDataSheet(slice any, option ...SheetOption) *file {
+	f.AddSheets(genDataSheet(slice, option...))
 
 	return f
 }
