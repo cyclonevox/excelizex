@@ -72,7 +72,7 @@ func (s *Sheet) Excel() *file {
 		panic("need a sheet name at least")
 	}
 
-	return New().AddSheets(*s)
+	return New().AddSheets(s)
 }
 
 // writeRowIncr 会获取目前该写入的行

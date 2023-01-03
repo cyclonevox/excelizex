@@ -36,7 +36,7 @@ func (f *file) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 				return errors.New("plz set sheet name")
 			}
 
-			f.AddSheets(*s)
+			f.AddSheets(s)
 
 			if sw, err = f.excel().NewStreamWriter(s.Name); err != nil {
 				return
