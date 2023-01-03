@@ -1,13 +1,15 @@
 module github.com/cyclonevox/excelizex
 
-go 1.19
-
-require github.com/xuri/excelize/v2 v2.6.1
+go 1.18
 
 require (
-	github.com/go-playground/locales v0.14.0 // indirect
-	github.com/go-playground/universal-translator v0.18.0 // indirect
-	github.com/go-playground/validator/v10 v10.11.1 // indirect
+	github.com/go-playground/locales v0.14.0
+	github.com/go-playground/universal-translator v0.18.0
+	github.com/go-playground/validator/v10 v10.11.1
+	github.com/xuri/excelize/v2 v2.6.1
+)
+
+require (
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
