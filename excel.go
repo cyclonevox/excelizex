@@ -43,6 +43,20 @@ func (f *file) AddSheets(sheets ...*Sheet) *file {
 	return f
 }
 
+// AddDataSheet support use slice and their data generate a sheet with header and data
+func (f *file) AddDataSheet(slice any, option ...SheetOption) *file {
+	f.AddSheets(genDataSheet(slice, option...))
+
+	return f
+}
+
+// AddSimpleSheet support use struct and their data generate a sheet with only header
+func (f *file) AddSimpleSheet(a any, option ...SheetOption) *file {
+	f.AddSheets(NewSheet(option...).SetHeaderByStruct(a))
+
+	return f
+}
+
 func (f *file) setDefaultFormatSheetAndStyle(s *Sheet) (err error) {
 	_excel := f.excel()
 

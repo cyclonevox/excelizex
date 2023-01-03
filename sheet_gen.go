@@ -60,9 +60,3 @@ func genDataSheet(slice any, option ...SheetOption) (Sheet *Sheet) {
 
 	return
 }
-
-func (f *file) GenDataSheet(slice any, option ...SheetOption) *file {
-	f.AddSheets(genDataSheet(slice, option...))
-
-	return f
-}
