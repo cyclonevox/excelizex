@@ -3,6 +3,7 @@ package excelizex
 import (
 	"bytes"
 	"github.com/xuri/excelize/v2"
+	"io"
 )
 
 type file struct {
@@ -10,7 +11,13 @@ type file struct {
 	convert map[string]ConvertFunc
 }
 
-func New() *file {
+func New(reader ...io.Reader) *file {
+	if len(reader) > 0 {
+		if f, err := excelize.OpenReader(reader[0]); err != nil {
+			return &file{_excel: f}
+		}
+	}
+
 	return &file{_excel: excelize.NewFile()}
 }
 
