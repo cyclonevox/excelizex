@@ -56,3 +56,9 @@ func Gen(slice any, option ...SheetOption) (Sheet *Sheet) {
 
 	return
 }
+
+func (f *file) GenSheet(slice any, option ...SheetOption) *file {
+	f.AddSheets(Gen(slice, option...))
+
+	return f
+}

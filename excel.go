@@ -1,6 +1,7 @@
 package excelizex
 
 import (
+	"bytes"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -17,11 +18,15 @@ func (f *file) excel() *excelize.File {
 	return f._excel
 }
 
-func (f *file) Save() {
-	f.excel().Save()
+func (f *file) SaveAs(name string) (err error) {
+	return f.excel().SaveAs(name)
 }
 
-func (f *file) AddSheets(sheets ...Sheet) *file {
+func (f *file) Buffer() (*bytes.Buffer, error) {
+	return f.excel().WriteToBuffer()
+}
+
+func (f *file) AddSheets(sheets ...*Sheet) *file {
 	var err error
 
 	for _, s := range sheets {
@@ -30,7 +35,7 @@ func (f *file) AddSheets(sheets ...Sheet) *file {
 		}
 		f._excel.NewSheet(s.Name)
 
-		if err = f.setDefaultFormatSheetAndStyle(&s); err != nil {
+		if err = f.setDefaultFormatSheetAndStyle(s); err != nil {
 			panic(err)
 		}
 	}
