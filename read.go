@@ -58,9 +58,9 @@ func (f *File) SetConvertMap(convert map[string]ConvertFunc) *File {
 	return f
 }
 
-type ImportFunc func(any) error
+type ImportFunc func(ptr any) error
 
-func (f *File) Read(sheetName string, data any, fn ImportFunc) Result {
+func (f *File) Read(sheetName string, ptr any, fn ImportFunc) Result {
 	var (
 		results Result
 		rows    *excelize.Rows
@@ -70,29 +70,33 @@ func (f *File) Read(sheetName string, data any, fn ImportFunc) Result {
 		panic(err)
 	}
 
-	typ := reflect.TypeOf(data)
-	val := reflect.ValueOf(data)
-	if typ.Kind() != reflect.Struct {
-		panic(errors.New("generate function support Struct only"))
+	typ := reflect.TypeOf(ptr)
+	val := reflect.ValueOf(ptr)
+
+	if typ.Kind() != reflect.Pointer || typ.Elem().Kind() != reflect.Struct {
+		panic(errors.New("read function support struct type variable's Pointer type only"))
 	}
 
-	// 获取结构体中应对的
+	// 获取结构体中对应的字段和转换器名称等
 	var (
-		headers          []string
-		dataConvert      = make(map[string]string)
-		headerStructName = make(map[string]string)
+		headers []string
+		// k:columns data v:convert tag name
+		dataConvert = make(map[string]string)
+		// k:header v:Struct Field Name
+		headerFieldName = make(map[string]string)
 	)
 
-	for j := 0; j < typ.NumField(); j++ {
-		field := val.Type().Field(j)
+	for j := 0; j < typ.Elem().NumField(); j++ {
+		field := val.Elem().Type().Field(j)
 
 		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
 			headers = append(headers, hasTag)
+			headerFieldName[hasTag] = field.Name
 
 			convTag := field.Tag.Get("excel-conv")
 			if convTag != "" {
-				headerStructName[hasTag] = convTag
+				dataConvert[hasTag] = convTag
 			}
 		}
 	}
@@ -116,13 +120,12 @@ func (f *File) Read(sheetName string, data any, fn ImportFunc) Result {
 
 			continue
 		}
-
 		// 将值加入结构体
 		for index, col := range columns {
-			field := val.Elem().FieldByName(headerStructName[headers[index]])
+			field := reflect.ValueOf(ptr).Elem().FieldByName(headerFieldName[headers[index]])
 
 			// 查看该字段是否有转换器
-			if v, ok := dataConvert[col]; ok {
+			if v, ok := dataConvert[headers[index]]; ok {
 				var convertValue any
 				if convertValue, err = f.convert[v](col); err != nil {
 					results.Errors = append(results.Errors, ErrorInfo{
@@ -133,7 +136,9 @@ func (f *File) Read(sheetName string, data any, fn ImportFunc) Result {
 					continue
 				}
 
-				field = reflect.ValueOf(convertValue)
+				field.Set(reflect.ValueOf(convertValue))
+
+				continue
 			}
 
 			switch field.Kind() {
@@ -161,7 +166,7 @@ func (f *File) Read(sheetName string, data any, fn ImportFunc) Result {
 			continue
 		}
 
-		if info := importData(data, fn); len(info) > 0 {
+		if info := importData(ptr, fn); len(info) > 0 {
 			results.Errors = append(results.Errors, ErrorInfo{
 				ErrorRow:  row,
 				ErrorInfo: info,

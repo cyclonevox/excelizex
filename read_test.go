@@ -1,7 +1,61 @@
 package excelizex
 
-import "testing"
+import (
+	"os"
+	"reflect"
+	"strconv"
+	"testing"
+)
 
-func TestName(t *testing.T) {
+type readTestStruct struct {
+	Id   int64  `excel:"埃低"`
+	Name string `excel:"名称"`
+	List []struct {
+		Id int64
+	} `excel:"列表" excel-conv:"list"`
+}
 
+func listConvert(rawData string) (any, error) {
+	i, err := strconv.ParseInt(rawData, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return []struct{ Id int64 }{{i}}, nil
+}
+
+func TestConvertRead(t *testing.T) {
+	open, err := os.Open("./test_file/read_test.xlsx")
+	if err != nil {
+		panic(err)
+	}
+
+	var expect = []readTestStruct{
+		{103, "张3", []struct{ Id int64 }{{123}}},
+		{104, "张4", []struct{ Id int64 }{{124}}},
+		{105, "张5", []struct{ Id int64 }{{125}}},
+		{106, "张6", []struct{ Id int64 }{{126}}},
+		{107, "张7", []struct{ Id int64 }{{127}}},
+		{108, "张8", []struct{ Id int64 }{{128}}},
+		{109, "张9", []struct{ Id int64 }{{129}}},
+		{110, "张10", []struct{ Id int64 }{{130}}},
+	}
+
+	var (
+		sList []readTestStruct
+		s     = &readTestStruct{}
+	)
+
+	file := New(open)
+	file.SetConvert("list", listConvert).Read("测试用表", s, func(ptr any) error {
+		sList = append(sList, *s)
+
+		return nil
+	})
+
+	for index := range expect {
+		if !reflect.DeepEqual(sList[index], expect[index]) {
+			t.Fatalf("index:%d,Expect:%+v,but%+v", index, sList[index], expect[index])
+		}
+	}
 }

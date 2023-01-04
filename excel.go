@@ -14,8 +14,11 @@ type File struct {
 func New(reader ...io.Reader) *File {
 	if len(reader) > 0 {
 		if f, err := excelize.OpenReader(reader[0]); err != nil {
+			panic(err)
+		} else {
 			return &File{_excel: f}
 		}
+
 	}
 
 	return &File{_excel: excelize.NewFile()}
