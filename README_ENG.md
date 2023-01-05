@@ -5,11 +5,11 @@ excelizex is a simple package of qax-os/excelize. It's purpose is to provide a c
 The functions currently planned or provided are:
 
 - [x] Basic data binding
-- [x] 通过实现excelizex提供的迭代器接口来配合 qax-os/excelize的流式写入方法 对Excel文件批量写入
-- [x] 通过数据绑定的结构体声明变量 来生成包含数据的Sheet(表)
+- [x] By implementing the iterator interface provided by excelizex to cooperate with the streaming writing method of qax-os/excelize, batch write Excel files.
+- [x] Use the data bound structure to declare variables to generate a Sheet containing data.
 - [x] Set the converter to complete the data conversion in Excel according to the business requirements.
 - [x] The data binding structure supports the function of reading table rows and binding business functions.
-- [x] 通过流式写入功能支持对读取表的验证和业务操作后产生的结果生成excel文件
+- [x] The streaming write function supports the verification of read tables and the generation of Excel files from the results of business operations.
 - [ ] Provide built-in data validation, support its extension, and support translation.
 - [ ] Provides a more convenient method for generating multi-level pull-down menus.
 - [ ] more..
