@@ -46,8 +46,8 @@ excelizex目前采取的方案是到最后生成excel的os.File或者 bytes时�
 
 ### 所以当然至少目前需要特别注意的是：
 
-1.Sheet的名称是必要的。否则excelizex不方便找到你所需要操作的表是什么
-2.Sheet的名称不能使用Sheet1名称，因为最后会删除名称为Sheet1的名称
+1. Sheet的名称是必要的。否则excelizex不方便找到你所需要操作的表是什么
+2. Sheet的名称不能使用Sheet1名称，因为最后会删除名称为Sheet1的名称
 ****
 
 ### 写入：
@@ -125,6 +125,7 @@ type readTestStruct struct {
 ```
 本类型中，需要注意的是，我们不仅使用`excel`tag 还使用了`excel-conv`的tag，
 在该例子中他代表会使用名称为list的转换器将该表头下的数据进行转换。
+**并且传入READ()中的绑定结构体变量 需要使用其变量的指针而不是值**
 ```go
 func listConvert(rawData string) (any, error) {
 	i, err := strconv.ParseInt(rawData, 10, 64)

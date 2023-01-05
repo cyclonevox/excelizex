@@ -35,16 +35,12 @@ Data [][]any `json:"data"`
 }
 ```
 
-可以通过 **excelizex.NewSheet()** 的方法来创建Sheet(表)，并经由
-**excelizex.New()** 创建excel文件类型，并调用其AddSheets方法来加入创建好的表，
-而excelizex 用到的qax-os/excelize库创建excel 文件时则会默认生成一个Sheet1表，
-excelizex目前采取的方案是到最后生成excel的os.File或者 bytes时会删除掉该表。
-(其实就是懒得判断懒得给默认生成的Sheet1改名
+You can create a sheet by using the excelizex.NewSheet() method, create an excel file type through excelizex.New(), and call its AddSheets method to add the created table. When you create an excel file, the qax-os/excel library used by excelizex will generate a Sheet1 table by default. The current scheme of excelizex is to delete the table when the os.File or bytes finally generated Excel file. (Actually, I'm too lazy to judge and rename the default generated "Sheet1")
 
-### 所以当然至少目前需要特别注意的是：
+### So, of course, at least at present, you should pay special attention to:
 
-1.Sheet的名称是必要的。否则excelizex不方便找到你所需要操作的表是什么
-2.Sheet的名称不能使用Sheet1名称，因为最后会删除名称为Sheet1的名称
+1. The name of the sheet is necessary. Otherwise, excelizex is not convenient to find the table you need to operate on.
+2. The name Sheet1 cannot be used for the name of Sheet, because the Sheet1 will be deleted finally.
 ****
 
 ### 写入：
@@ -120,8 +116,9 @@ type readTestStruct struct {
 	} `excel:"列表" excel-conv:"list"`
 }
 ```
-本类型中，需要注意的是，我们不仅使用`excel`tag 还使用了`excel-conv`的tag，
+本例中，需要注意的是，我们不仅使用`excel`tag 还使用了`excel-conv`的tag，
 在该例子中他代表会使用名称为list的转换器将该表头下的数据进行转换。
+**并且传入READ()中的绑定结构体变量 需要使用其变量的指针而不是值**
 ```go
 func listConvert(rawData string) (any, error) {
 	i, err := strconv.ParseInt(rawData, 10, 64)
@@ -132,7 +129,10 @@ func listConvert(rawData string) (any, error) {
 	return []struct{ Id int64 }{{i}}, nil
 }
 
-var sList []readTestStruct
+var (
+	sList []readTestStruct
+	s = new(readTestStruct)
+)
 
 file.SetConvert("list", listConvert).Read("test", s, func() error {
 sList = append(sList, *s)
