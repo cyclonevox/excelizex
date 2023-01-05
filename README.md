@@ -1,4 +1,5 @@
-## excelizex 只是一个简单的excel库
+## Excelizex 只是一个简单的excel库
+ 中文| [English](README_ENG.md)
 
 excelizex 仅仅只是对 qax-os/excelize 的简单封装。其目的是满足业务开发需要用到对excel文件导入、导出等操作时，
 提供一定的易用性（当然目前依然是依托答辩。只是鉴于excelize并未直接提供数据绑定等功能，方便自己使用。

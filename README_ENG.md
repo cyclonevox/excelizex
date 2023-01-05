@@ -1,4 +1,5 @@
-## excelizex is a simple Excel library.
+## Excelizex is a simple Excel library.
+English| [中文](README.md)
 
 excelizex is a simple package of qax-os/excelize. It's purpose is to provide a certain degree of ease of use when importing and exporting Excel files to meet business development needs (of course, it still a piece of shit. It is only because excelize does not directly provide data binding and other functions to facilitate their own use. In view of time, energy and personal capabilities, only the [Notice Information Line - Header Line - Data Line] excel template is currently provided.
 ****
