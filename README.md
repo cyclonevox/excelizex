@@ -47,7 +47,7 @@ excelizex目前采取的方案是到最后生成excel的os.File或者 bytes时�
 ### 所以当然至少目前需要特别注意的是：
 
 1. Sheet的名称是必要的。否则excelizex不方便找到你所需要操作的表是什么
-2. Sheet的名称不能使用Sheet1名称，因为最后会删除名称为Sheet1的名称
+2. Sheet的名称不能使用Sheet1名称，因为最后会删除名称为Sheet1的表
 ****
 
 ### 写入：
