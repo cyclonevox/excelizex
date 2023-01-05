@@ -1,37 +1,34 @@
-## excelizex 只是一个简单的excel库
+## excelizex is a simple Excel library.
 
-excelizex 仅仅只是对 qax-os/excelize 的简单封装。其目的是满足业务开发需要用到对excel文件导入、导出等操作时，
-提供一定的易用性（当然目前依然是依托答辩。只是鉴于excelize并未直接提供数据绑定等功能，方便自己使用。
-鉴于时间和精力以及个人能力，目前只提供了 [提示信息行 - 表头行 - 数据行] excel模板
+excelizex is a simple package of qax-os/excelize. It's purpose is to provide a certain degree of ease of use when importing and exporting Excel files to meet business development needs (of course, it still a piece of shit. It is only because excelize does not directly provide data binding and other functions to facilitate their own use. In view of time, energy and personal capabilities, only the [Notice Information Line - Header Line - Data Line] excel template is currently provided.
 ****
-目前计划或者已提供的功能有
+The functions currently planned or provided are:
 
-- [x] 基本的数据绑定
+- [x] Basic data binding
 - [x] 通过实现excelizex提供的迭代器接口来配合 qax-os/excelize的流式写入方法 对Excel文件批量写入
 - [x] 通过数据绑定的结构体声明变量 来生成包含数据的Sheet(表)
-- [x] 通过设置转换器，来完成业务的需求下对excel中数据的转换
-- [x] 在数据绑定的结构体下 支持读取表行的功能,并绑定业务函数
+- [x] Set the converter to complete the data conversion in Excel according to the business requirements.
+- [x] The data binding structure supports the function of reading table rows and binding business functions.
 - [x] 通过流式写入功能支持对读取表的验证和业务操作后产生的结果生成excel文件
-- [ ] 提供内置数据验证，并支持对其扩展，并且支持翻译内容
-- [ ] 提供更便利的多级下拉菜单的生成方法
-- [ ] 后面的想到再说吧。。。。233
+- [ ] Provide built-in data validation, support its extension, and support translation.
+- [ ] Provides a more convenient method for generating multi-level pull-down menus.
+- [ ] more..
 
 ****
 
-#### 使用说明：
+#### Instructions:
 
-excelizex抽象了一个Sheet类型，而一个excel是由多个Sheet组成的，则可以将
-Sheet类型作为生成excel的参数，Sheet类型中包含表名表头等
+Excelizex abstracts a Sheet type, and an excel is composed of multiple sheets. The Sheet type can be used as a parameter to generate excel. The Sheet type includes table name, header, etc
 
 ```go
 type Sheet struct {
-// 表名
+// Sheet Name
 Name string `json:"name"`
-// 顶栏提示
+// Notice Information Line
 Notice string `json:"notice"`
-// 表头
+// Header Line
 Header []string `json:"header"`
-// 数据
+// Data Lines
 Data [][]any `json:"data"`
 ....
 }
