@@ -58,7 +58,7 @@ func (f *File) SetConvertMap(convert map[string]ConvertFunc) *File {
 	return f
 }
 
-type ImportFunc func(ptr any) error
+type ImportFunc func() error
 
 func (f *File) Read(sheetName string, ptr any, fn ImportFunc) Result {
 	var (
@@ -190,7 +190,7 @@ func importData(data any, fn ImportFunc) (errInfo []string) {
 	}
 
 	// 执行导入业务
-	if err := fn(data); err != nil {
+	if err := fn(); err != nil {
 		errInfo = append(errInfo, err.Error())
 
 		return

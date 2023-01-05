@@ -28,6 +28,10 @@ func NewSheet(options ...SheetOption) *Sheet {
 	return sheet
 }
 
+func NewDataSheet(slice any, options ...SheetOption) *Sheet {
+	return genDataSheet(slice, options...)
+}
+
 func (s *Sheet) SetName(name string) {
 	s.Name = name
 }
@@ -44,6 +48,9 @@ func (s *Sheet) SetHeader(header []string) {
 // SetHeaderByStruct 方法会检测结构体中的excel标签，以获取结构体表头
 func (s *Sheet) SetHeaderByStruct(a any) *Sheet {
 	typ := reflect.TypeOf(a)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
 
 	if typ.Kind() != reflect.Struct {
 		panic(errors.New("generate function support using struct only"))
@@ -105,6 +112,9 @@ func SetHeader(header []string) SheetOption {
 func SetHeaderByStruct(a any) SheetOption {
 	return func(s *Sheet) {
 		typ := reflect.TypeOf(a)
+		if typ.Kind() == reflect.Ptr {
+			typ = typ.Elem()
+		}
 
 		if typ.Kind() != reflect.Struct {
 			panic(errors.New("generate function support using struct only"))

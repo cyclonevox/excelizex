@@ -39,15 +39,19 @@ func singleRowData(single any) (list []any) {
 // genDataSheet can use input slice to generate sheet
 // This function just support simple data sheet
 func genDataSheet(slice any, option ...SheetOption) (Sheet *Sheet) {
-	if slice != nil {
+	if slice == nil {
 		panic(errors.New("slice nil"))
 	}
 
 	typ := reflect.TypeOf(slice)
 	val := reflect.ValueOf(slice)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		val = val.Elem()
+	}
 
-	if typ.Kind() != reflect.Slice {
-		panic(errors.New("generate sheet function by Data support using struct only"))
+	if reflect.ValueOf(slice).Kind() != reflect.Ptr || typ.Kind() != reflect.Slice {
+		panic(errors.New("generate sheet function by Data support using Slice prt only"))
 	}
 
 	for i := 0; i < val.Len(); i++ {

@@ -44,7 +44,7 @@ func (f *File) AddSheets(sheets ...*Sheet) *File {
 	var err error
 
 	for _, s := range sheets {
-		if s.Name == "" {
+		if s.Name == "" || s.Name == "Sheet1" {
 			panic("need a sheet name at least")
 		}
 		f._excel.NewSheet(s.Name)
@@ -58,8 +58,8 @@ func (f *File) AddSheets(sheets ...*Sheet) *File {
 }
 
 // AddDataSheet support use slice and their data generate a sheet with header and data
-func (f *File) AddDataSheet(slice any, option ...SheetOption) *File {
-	f.AddSheets(genDataSheet(slice, option...))
+func (f *File) AddDataSheet(slicePtr any, option ...SheetOption) *File {
+	f.AddSheets(genDataSheet(slicePtr, option...))
 
 	return f
 }

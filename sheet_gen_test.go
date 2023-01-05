@@ -80,7 +80,7 @@ func TestSliceGen(t *testing.T) {
 				{"456", "女", "213"},
 			},
 		}
-		sheet := genDataSheet(ttt)
+		sheet := genDataSheet(&ttt)
 
 		if !reflect.DeepEqual(expectSheet, sheet) {
 			t.Fatalf("expect %+v,but %+v", expectSheet, sheet)
