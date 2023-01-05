@@ -128,15 +128,18 @@ type readTestStruct struct {
 **并且传入READ()中的绑定结构体变量 需要使用其变量的指针而不是值**
 ```go
 func listConvert(rawData string) (any, error) {
-	i, err := strconv.ParseInt(rawData, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	return []struct{ Id int64 }{{i}}, nil
+i, err := strconv.ParseInt(rawData, 10, 64)
+if err != nil {
+return nil, err
 }
 
-var sList []readTestStruct
+return []struct{ Id int64 }{{i}}, nil
+}
+
+var (
+sList []readTestStruct
+s = new(readTestStruct)
+)
 
 file.SetConvert("list", listConvert).Read("test", s, func() error {
 sList = append(sList, *s)
