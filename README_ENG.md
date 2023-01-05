@@ -18,7 +18,7 @@ The functions currently planned or provided are:
 
 #### Instructions:
 
-Excelizex abstracts a Sheet type, and an excel is composed of multiple sheets. The Sheet type can be used as a parameter to generate excel. The Sheet type includes table name, header, etc
+Excelizex abstracts a Sheet type, and an excel file is composed of multiple sheets. The Sheet type can be used as a parameter to generate excel. The Sheet type includes table name, header, etc
 
 ```go
 type Sheet struct {
