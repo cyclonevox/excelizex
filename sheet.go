@@ -17,6 +17,8 @@ type Sheet struct {
 	Data [][]any `json:"data"`
 	// 写入到第几行,主要用于标记生成excel中的表时，需要续写的位置
 	writeRow int
+	// 下拉选项 暂时只支持单列
+	pd *pullDown
 }
 
 func NewSheet(options ...SheetOption) *Sheet {
@@ -32,17 +34,23 @@ func NewDataSheet(slice any, options ...SheetOption) *Sheet {
 	return genDataSheet(slice, options...)
 }
 
-func (s *Sheet) SetName(name string) {
+func (s *Sheet) SetName(name string) *Sheet {
 	s.Name = name
+
+	return s
 }
 
-func (s *Sheet) SetNotice(notice string) {
+func (s *Sheet) SetNotice(notice string) *Sheet {
 	s.Notice = notice
+
+	return s
 }
 
 // SetHeader 为手动设置表的头部
-func (s *Sheet) SetHeader(header []string) {
+func (s *Sheet) SetHeader(header []string) *Sheet {
 	s.Header = header
+
+	return s
 }
 
 // SetHeaderByStruct 方法会检测结构体中的excel标签，以获取结构体表头
@@ -70,8 +78,23 @@ func (s *Sheet) SetHeaderByStruct(a any) *Sheet {
 	return s
 }
 
-func (s *Sheet) SetData(data [][]any) {
+func (s *Sheet) SetData(data [][]any) *Sheet {
 	s.Data = data
+
+	return s
+}
+
+// SetOptions 设置下拉的选项
+func (s *Sheet) SetOptions(pds ...*pullDown) *Sheet {
+	for _, pd := range pds {
+		if s.pd == nil {
+			s.pd = pd
+		} else {
+			s.pd.Merge(pd)
+		}
+	}
+
+	return s
 }
 
 func (s *Sheet) Excel() *File {
@@ -97,51 +120,33 @@ func (s *Sheet) writeRowIncr(num ...int) string {
 type SheetOption = func(*Sheet)
 
 func SetName(name string) SheetOption {
-	return func(sheet *Sheet) {
-		sheet.Name = name
+	return func(s *Sheet) {
+		s.SetName(name)
 	}
 }
 
 func SetHeader(header []string) SheetOption {
 	return func(s *Sheet) {
-		s.Header = header
+		s.SetHeader(header)
 	}
 }
 
-// SetHeaderByStruct 会根据结构体的tag来生成表头
-func SetHeaderByStruct(a any) SheetOption {
+// HeaderByStruct 会根据结构体的tag来生成表头
+func HeaderByStruct(a any) SheetOption {
 	return func(s *Sheet) {
-		typ := reflect.TypeOf(a)
-		if typ.Kind() == reflect.Ptr {
-			typ = typ.Elem()
-		}
-
-		if typ.Kind() != reflect.Struct {
-			panic(errors.New("generate function support using struct only"))
-		}
-
-		for i := 0; i < typ.NumField(); i++ {
-			typeField := typ.Field(i)
-
-			headerName := typeField.Tag.Get("excel")
-			if headerName == "" {
-				continue
-			} else {
-				s.Header = append(s.Header, headerName)
-			}
-		}
+		s.SetHeaderByStruct(a)
 	}
 }
 
-func SetNotice(notice string) SheetOption {
+func Notice(notice string) SheetOption {
 	return func(s *Sheet) {
-		s.Notice = notice
+		s.SetNotice(notice)
 	}
 }
 
-// SetData for 仅作为少量数据写入.如果需要写入大量数据 请使用StreamWriteIn() 以调用excelize的流式写入.
-func SetData(data [][]any) SheetOption {
+// Data for 仅作为少量数据写入.如果需要写入大量数据 请使用StreamWriteIn() 以调用excelize的流式写入.
+func Data(data [][]any) SheetOption {
 	return func(s *Sheet) {
-		s.Data = data
+		s.SetData(data)
 	}
 }

@@ -41,7 +41,7 @@ func (f *File) SetResults(result *Result) *File {
 		result,
 		SetName(result.SheetName),
 		SetHeader(append(result.Header, "错误原因")),
-		SetNotice(result.Notice),
+		Notice(result.Notice),
 	); err != nil {
 		panic(err)
 	}

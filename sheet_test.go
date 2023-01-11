@@ -15,9 +15,9 @@ func TestNewSheet(t *testing.T) {
 
 	newSheet := NewSheet(
 		SetName(testName),
-		SetNotice(testNotice),
+		Notice(testNotice),
 		SetHeader(testHeader),
-		SetData([][]any{{"s123", "123"}, {"123123"}, {"123123"}}),
+		Data([][]any{{"s123", "123"}, {"123123"}, {"123123"}}),
 	)
 
 	if !reflect.DeepEqual(expectSheet, newSheet) {
@@ -33,9 +33,9 @@ func TestSheet_writeRowIncrWrite(t *testing.T) {
 
 	newSheet := NewSheet(
 		SetName(testName),
-		SetNotice(testNotice),
+		Notice(testNotice),
 		SetHeader(testHeader),
-		SetData([][]any{{"s123", "123"}, {"123123"}, {"123123"}}),
+		Data([][]any{{"s123", "123"}, {"123123"}, {"123123"}}),
 	)
 
 	testRowName = newSheet.writeRowIncr()

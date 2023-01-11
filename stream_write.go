@@ -14,7 +14,7 @@ type StreamWritable interface {
 
 // StreamWriteIn 通过调用迭代器接口为excel文件来生成表.
 // 迭代器接口中的 Data() 返回返回的值的结构体来作为生成表的头.时无需用传入option手动设置表头
-// option 可设定表，需要注意的是，必须设定表名称.
+// Option 可设定表，需要注意的是，必须设定表名称.
 func (f *File) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error) {
 	var (
 		s         *Sheet
@@ -27,7 +27,7 @@ func (f *File) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 
 		if j == 0 {
 			s = NewSheet(option...)
-			// 检测到未包含header设置则会使用 SetHeaderByStruct 获取数据中结构体的header元素
+			// 检测到未包含header设置则会使用 HeaderByStruct 获取数据中结构体的header元素
 			if len(s.Header) == 0 {
 				s = s.SetHeaderByStruct(d)
 			}
@@ -35,7 +35,6 @@ func (f *File) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 			if s.Name == "" {
 				return errors.New("plz set sheet name")
 			}
-
 			f.AddSheets(s)
 
 			if sw, err = f.excel().NewStreamWriter(s.Name); err != nil {
@@ -61,11 +60,6 @@ func (f *File) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 	}
 
 	if err = sw.Flush(); err != nil {
-		return
-	}
-
-	// 最后将头和notice等文件设置
-	if err = f.setDefaultFormatSheetAndStyle(s); err != nil {
 		return
 	}
 
