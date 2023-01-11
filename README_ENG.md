@@ -11,6 +11,8 @@ The functions currently planned or provided are:
 - [x] Set the converter to complete the data conversion in Excel according to the business requirements.
 - [x] The data binding structure supports the function of reading table rows and binding business functions.
 - [x] The streaming write function supports the verification of read tables and the generation of Excel files from the results of business operations.
+- [x] 实现单级下拉选项菜单
+- [ ] excel加密限制
 - [ ] Provide built-in data validation, support its extension, and support translation.
 - [ ] Provides a more convenient method for generating multi-level pull-down menus.
 - [ ] more..
