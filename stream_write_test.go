@@ -38,7 +38,7 @@ func TestFile_StreamWriteIn(t *testing.T) {
 
 	testFile := New()
 
-	if err := testFile.StreamWriteIn(&test, Name(testName), Notice(testNotice)); err != nil {
+	if err := testFile.AddSheetByStream(&test, Name(testName), Notice(testNotice)); err != nil {
 		t.Fatal("TestFile_StreamWriteIn", "写入数据表错误:", err)
 	}
 

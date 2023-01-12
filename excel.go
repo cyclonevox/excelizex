@@ -13,8 +13,9 @@ import (
 const OptionsSaveTable = "选项数据表"
 
 type File struct {
-	_excel  *excelize.File
-	convert map[string]ConvertFunc
+	selectSheetName string
+	_excel          *excelize.File
+	convert         map[string]ConvertFunc
 }
 
 func New(reader ...io.Reader) *File {
@@ -30,18 +31,60 @@ func New(reader ...io.Reader) *File {
 	return &File{_excel: excelize.NewFile()}
 }
 
+func (f *File) SelectSheet(sheetName string, password ...string) *File {
+	f.selectSheetName = sheetName
+
+	if len(password) > 0 {
+		if err := f.excel().UnprotectSheet(f.selectSheetName, password[0]); nil != err {
+			panic(err)
+		}
+	}
+
+	return f
+}
+
 func (f *File) excel() *excelize.File {
 	return f._excel
 }
 
-func (f *File) SaveAs(name string) (err error) {
+func (f *File) SaveAs(name string, password ...string) (err error) {
 	f.excel().DeleteSheet("Sheet1")
+
+	if len(password) > 0 {
+		protect := &excelize.FormatSheetProtection{
+			Password:          password[0],
+			EditObjects:       true,
+			EditScenarios:     true,
+			SelectLockedCells: true,
+		}
+
+		for _, n := range f.excel().GetSheetList() {
+			if err = f.excel().ProtectSheet(n, protect); nil != err {
+				return
+			}
+		}
+	}
 
 	return f.excel().SaveAs(name)
 }
 
-func (f *File) Buffer() (*bytes.Buffer, error) {
+func (f *File) Buffer(password ...string) (*bytes.Buffer, error) {
 	f.excel().DeleteSheet("Sheet1")
+
+	if len(password) > 0 {
+		protect := &excelize.FormatSheetProtection{
+			Password:          password[0],
+			EditObjects:       true,
+			EditScenarios:     true,
+			SelectLockedCells: true,
+		}
+
+		for _, n := range f.excel().GetSheetList() {
+			if err := f.excel().ProtectSheet(n, protect); nil != err {
+				return nil, err
+			}
+		}
+	}
 
 	return f.excel().WriteToBuffer()
 }

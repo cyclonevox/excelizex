@@ -33,16 +33,8 @@ func (r *Result) Close() error {
 
 // SetResults 该方法会清除原始的表。并将错误数据保留以及将错误原因写入原文件中
 func (f *File) SetResults(result *Result) *File {
-	// 去除原始表
-	f.excel().DeleteSheet(result.SheetName)
-
 	// 流式导入数据
-	if err := f.StreamWriteIn(
-		result,
-		Name(result.SheetName),
-		Header(append(result.Header, "错误原因")),
-		Notice(result.Notice),
-	); err != nil {
+	if err := f.WriteInByStream(result, result.dataStartRow); err != nil {
 		panic(err)
 	}
 

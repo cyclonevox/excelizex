@@ -60,15 +60,16 @@ func (f *File) SetConvertMap(convert map[string]ConvertFunc) *File {
 
 type ImportFunc func() error
 
-func (f *File) Read(sheetName string, ptr any, fn ImportFunc) Result {
+func (f *File) Read(ptr any, fn ImportFunc) Result {
 	var (
 		results Result
 		rows    *excelize.Rows
 		err     error
 	)
-	if rows, err = f.excel().Rows(sheetName); err != nil {
+	if rows, err = f.excel().Rows(f.selectSheetName); err != nil {
 		panic(err)
 	}
+	defer rows.Close()
 
 	typ := reflect.TypeOf(ptr)
 	val := reflect.ValueOf(ptr)
@@ -176,7 +177,30 @@ func (f *File) Read(sheetName string, ptr any, fn ImportFunc) Result {
 		}
 	}
 
+	if err = f.removeDataLine(results); err != nil {
+		panic(err)
+	}
+
 	return results
+}
+
+func (f *File) removeDataLine(results Result) (err error) {
+	var rows *excelize.Rows
+	if rows, err = f.excel().Rows(f.selectSheetName); err != nil {
+		return
+	}
+	defer rows.Close()
+
+	var i int
+	for rows.Next() {
+		if i == results.dataStartRow {
+			if err = f.excel().RemoveRow(f.selectSheetName, i); err != nil {
+				return
+			}
+		}
+	}
+
+	return
 }
 
 func importData(data any, fn ImportFunc) (errInfo []string) {

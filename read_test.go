@@ -44,12 +44,14 @@ func TestConvertRead(t *testing.T) {
 	}
 
 	var sListPtr []*readTestStruct
-	file.SetConvert("list", listConvert).Read("测试用表", s, func() error {
-		data := *s
-		sListPtr = append(sListPtr, &data)
+	file.SelectSheet("测试用表").
+		SetConvert("list", listConvert).
+		Read(s, func() error {
+			data := *s
+			sListPtr = append(sListPtr, &data)
 
-		return nil
-	})
+			return nil
+		})
 
 	for index := range expectPtr {
 		if !reflect.DeepEqual(sListPtr[index], expectPtr[index]) {
@@ -70,11 +72,13 @@ func TestConvertRead(t *testing.T) {
 
 	var sList []readTestStruct
 
-	file.SetConvert("list", listConvert).Read("测试用表", s, func() error {
-		sList = append(sList, *s)
+	file.SelectSheet("测试用表").
+		SetConvert("list", listConvert).
+		Read(s, func() error {
+			sList = append(sList, *s)
 
-		return nil
-	})
+			return nil
+		})
 
 	for index := range expect {
 		if !reflect.DeepEqual(sList[index], expect[index]) {

@@ -12,10 +12,10 @@ type StreamWritable interface {
 	Close() error
 }
 
-// StreamWriteIn 通过调用迭代器接口为excel文件来生成表.
+// AddSheetByStream 通过调用迭代器接口为excel文件来生成表.
 // 迭代器接口中的 Data() 返回返回的值的结构体来作为生成表的头.时无需用传入option手动设置表头
 // Option 可设定表，需要注意的是，必须设定表名称.
-func (f *File) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error) {
+func (f *File) AddSheetByStream(i StreamWritable, option ...SheetOption) (err error) {
 	var (
 		s         *Sheet
 		sw        *excelize.StreamWriter
@@ -59,6 +59,36 @@ func (f *File) StreamWriteIn(i StreamWritable, option ...SheetOption) (err error
 		return
 	}
 
+	if err = sw.Flush(); err != nil {
+		return
+	}
+
+	return
+}
+
+func (f *File) WriteInByStream(i StreamWritable, startLine int) (err error) {
+	if f.selectSheetName == "" {
+		panic("plz use *File.SelectSheet select a sheet by name first")
+	}
+
+	var sw *excelize.StreamWriter
+	if sw, err = f.excel().NewStreamWriter(f.selectSheetName); err != nil {
+		return
+	}
+
+	for j := 0; i.Next(); j++ {
+		d := i.Data()
+
+		if err = sw.SetRow("A"+strconv.FormatInt(int64(startLine), 10), singleRowData(d)); err != nil {
+			return
+		}
+
+		startLine++
+	}
+
+	if err = i.Close(); err != nil {
+		return
+	}
 	if err = sw.Flush(); err != nil {
 		return
 	}
