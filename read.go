@@ -103,8 +103,9 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 	}
 
 	var (
-		row         int
-		headerFound bool
+		row           int
+		headerFound   bool
+		noticeColumns []string
 	)
 	for rows.Next() {
 		row++
@@ -117,7 +118,13 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		if !headerFound {
 			headerFound = reflect.DeepEqual(columns, headers)
 			results.Header = headers
-			results.dataStartRow = row
+			results.dataStartRow = row + 1
+
+			if !headerFound {
+				noticeColumns = columns
+			} else {
+				results.Notice = noticeColumns
+			}
 
 			continue
 		}
@@ -131,6 +138,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 				if convertValue, err = f.convert[v](col); err != nil {
 					results.Errors = append(results.Errors, ErrorInfo{
 						ErrorRow:  row,
+						RawData:   columns,
 						ErrorInfo: []string{err.Error()},
 					})
 
@@ -163,13 +171,10 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 
 		}
 
-		if len(results.Errors) > 0 {
-			continue
-		}
-
 		if info := importData(ptr, fn); len(info) > 0 {
 			results.Errors = append(results.Errors, ErrorInfo{
 				ErrorRow:  row,
+				RawData:   columns,
 				ErrorInfo: info,
 			})
 
@@ -180,6 +185,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 	if err = f.removeDataLine(results); err != nil {
 		panic(err)
 	}
+	results.HeaderNotice = append(results.HeaderNotice, results.Notice, append(results.Header, "错误原因"))
 
 	return results
 }
@@ -193,8 +199,9 @@ func (f *File) removeDataLine(results Result) (err error) {
 
 	var i int
 	for rows.Next() {
-		if i == results.dataStartRow {
-			if err = f.excel().RemoveRow(f.selectSheetName, i); err != nil {
+		i++
+		if i >= results.dataStartRow {
+			if err = f.excel().RemoveRow(f.selectSheetName, results.dataStartRow); err != nil {
 				return
 			}
 		}

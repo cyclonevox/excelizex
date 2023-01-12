@@ -98,10 +98,6 @@ func (f *File) AddSheets(sheets ...*Sheet) *File {
 		if err = f.writeDefaultFormatSheet(s); err != nil {
 			panic(err)
 		}
-
-		if err = f.setPullDown(s); err != nil {
-			panic(err)
-		}
 	}
 
 	return f
@@ -147,7 +143,7 @@ func (f *File) setPullDown(s *Sheet) (err error) {
 
 	for index, p := range s.pd.options {
 		dvRange := excelize.NewDataValidation(true)
-		dvRange.Sqref = p.col + strconv.FormatInt(int64(s.writeRow), 10) + ":" + p.col + "3000"
+		dvRange.Sqref = p.col + strconv.FormatInt(int64(s.writeRow+1), 10) + ":" + p.col + "3000"
 
 		var endColunmName string
 		endColunmName, err = excelize.ColumnNumberToName(len(p.data))
@@ -172,6 +168,10 @@ func (f *File) writeDefaultFormatSheet(s *Sheet) (err error) {
 	}
 
 	if err = f.writeHeader(s); err != nil {
+		return
+	}
+
+	if err = f.setPullDown(s); err != nil {
 		return
 	}
 

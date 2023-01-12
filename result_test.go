@@ -1,43 +1,49 @@
 package excelizex
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
 
 func TestFile_SetResults(t *testing.T) {
-	var testResult = Result{
-		SheetName: testName,
-		Notice:    testNotice,
-		Header:    testHeader,
-		Errors: []ErrorInfo{
-			{
-				ErrorRow:  2,
-				RawData:   []string{"测试人员1", "无", "123123123"},
-				ErrorInfo: []string{"性别只能是男或者女"},
-			},
-			{
-				ErrorRow:  3,
-				RawData:   []string{"测试人员2", "公", "helloWorld"},
-				ErrorInfo: []string{"性别只能是男或者女"},
-			},
-		},
-	}
+	vava := &testStruct{}
+	f := New().AddSimpleSheet(
+		vava,
+		Name(testName),
+		Notice(testNotice),
+		Data([][]any{{"测试人员1", "无", "123123123"}, {"测试人员2", "公", "helloWorld"}}),
+		Options(NewPullDown().AddOptions("B", []any{"男", "女"})),
+	)
 
-	results := New().SetResults(&testResult)
+	results := f.SelectSheet(testName).Read(vava, func() error {
+		fmt.Println(vava)
 
-	rows, err := results.excel().GetRows(testResult.SheetName)
-	if err != nil {
-		t.Fatal("TestFile_SetResults:", " 表数据获取失败", err)
-	}
+		return nil
+	})
 
-	testData := []testErrStruct{
-		{"测试人员1", "无", "123123123", "性别只能是男或者女"},
-		{"测试人员2", "公", "helloWorld", "性别只能是男或者女"},
-	}
+	rows, err := f.excel().GetRows(testName)
 
-	expectData := testErrStructs(testData).ToExpectData()
-	if !reflect.DeepEqual(expectData, rows) {
-		t.Fatalf("Expect:%+v,but%+v", expectData, rows)
+	f, exist := f.SetResults(&results)
+	if exist {
+		rows, err = f.excel().GetRows(testName)
+		if err != nil {
+			t.Fatal("TestFile_SetResults:", " 表数据获取失败", err)
+		}
+
+		testData := []testErrStruct{
+			{"测试人员1", "无", "123123123", "Sex必须是[男 女]中的一个"},
+			{"测试人员2", "公", "helloWorld", "Sex必须是[男 女]中的一个"},
+		}
+
+		if err = f.SaveAs("./test_file/result1.xlsx"); err != nil {
+			t.Fatal(err)
+		}
+
+		expectData := testErrStructs(testData).ToExpectData()
+		if !reflect.DeepEqual(expectData, rows) {
+			t.Fatalf("Expect:%+v,but%+v", expectData, rows)
+		}
+
 	}
 }

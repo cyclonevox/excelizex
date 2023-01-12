@@ -13,7 +13,7 @@ var (
 
 type testStruct struct {
 	Name       string `excel:"名称" json:"sheet"`
-	Sex        string `excel:"性别" json:"sex"`
+	Sex        string `excel:"性别" json:"sex" validate:"required,oneof=男 女"`
 	HelloWorld string `excel:"测试" json:"helloWorld"`
 }
 

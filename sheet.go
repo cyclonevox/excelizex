@@ -150,3 +150,9 @@ func Data(data [][]any) SheetOption {
 		s.SetData(data)
 	}
 }
+
+func Options(pds ...*pullDown) SheetOption {
+	return func(s *Sheet) {
+		s.SetOptions(pds...)
+	}
+}
