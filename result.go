@@ -39,8 +39,8 @@ func (f *File) SetResults(result *Result) *File {
 	// 流式导入数据
 	if err := f.StreamWriteIn(
 		result,
-		SetName(result.SheetName),
-		SetHeader(append(result.Header, "错误原因")),
+		Name(result.SheetName),
+		Header(append(result.Header, "错误原因")),
 		Notice(result.Notice),
 	); err != nil {
 		panic(err)

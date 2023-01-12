@@ -14,7 +14,7 @@ func (f *File) StyleNumFmtText() int {
 	return style
 }
 
-func (f *File) StyleRedTextLocked() int {
+func (f *File) DefaultNoticeStyleLocked() int {
 	var (
 		style int
 		err   error
@@ -26,6 +26,7 @@ func (f *File) StyleRedTextLocked() int {
 			Size:   11,
 			Color:  "#FF0000",
 		},
+		Alignment:  &excelize.Alignment{WrapText: true},
 		Protection: &excelize.Protection{Locked: true},
 	}); err != nil {
 		panic(err)

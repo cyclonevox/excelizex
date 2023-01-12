@@ -119,13 +119,13 @@ func (s *Sheet) writeRowIncr(num ...int) string {
 
 type SheetOption = func(*Sheet)
 
-func SetName(name string) SheetOption {
+func Name(name string) SheetOption {
 	return func(s *Sheet) {
 		s.SetName(name)
 	}
 }
 
-func SetHeader(header []string) SheetOption {
+func Header(header []string) SheetOption {
 	return func(s *Sheet) {
 		s.SetHeader(header)
 	}

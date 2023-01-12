@@ -6,6 +6,8 @@ import (
 	"github.com/xuri/excelize/v2"
 	"io"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 )
 
 const OptionsSaveTable = "选项数据表"
@@ -155,12 +157,32 @@ func (f *File) setColumnsText(s *Sheet) (err error) {
 
 func (f *File) writeNotice(s *Sheet) (err error) {
 	// 判断是否有提示并设置
+	// 根据换行设置单元格
 	if s.Notice != "" {
+		var (
+			max   int
+			lines = strings.Split(s.Notice, "\n")
+		)
+		for _, line := range lines {
+			max = utf8.RuneCount([]byte(line))
+		}
+		max = max/4 + 1
+
 		row := s.writeRowIncr()
 		if err = f.excel().SetCellValue(s.Name, row, s.Notice); err != nil {
 			return
 		}
-		if err = f.excel().SetCellStyle(s.Name, row, row, f.StyleRedTextLocked()); nil != err {
+		var colunmNumber string
+		if colunmNumber, err = excelize.ColumnNumberToName(max); err != nil {
+			return
+		}
+		if err = f.excel().MergeCell(s.Name, row, colunmNumber+"1"); err != nil {
+			return
+		}
+		if err = f.excel().SetRowHeight(s.Name, 1, float64(16*(len(lines)))); err != nil {
+			return
+		}
+		if err = f.excel().SetCellStyle(s.Name, row, row, f.DefaultNoticeStyleLocked()); nil != err {
 			return
 		}
 	}
@@ -207,75 +229,6 @@ func (f *File) writeData(s *Sheet) (err error) {
 					return
 				}
 				if err = f.excel().SetCellValue(s.Name, cellName, o); err != nil {
-					return
-				}
-			}
-		}
-	}
-
-	return
-}
-
-func (f *File) setDefaultFormatSheetAndStyle(s *Sheet) (err error) {
-	_excel := f.excel()
-
-	// 设置表各列数据格式 数字默认为“文本”
-	for i := range s.Header {
-		var colName string
-		if colName, err = excelize.ColumnNumberToName(1 + i); nil != err {
-			return
-		}
-
-		if err = _excel.SetColStyle(s.Name, colName, f.StyleNumFmtText()); nil != err {
-			return
-		}
-	}
-
-	// 判断是否有提示并设置
-	if s.Notice != "" {
-		row := s.writeRowIncr()
-		if err = _excel.SetCellValue(s.Name, row, s.Notice); err != nil {
-			return
-		}
-		if err = _excel.SetCellStyle(s.Name, row, row, f.StyleRedTextLocked()); nil != err {
-			return
-		}
-	}
-
-	// 判断是否有提示并设置
-	if len(s.Header) != 0 {
-		row := s.writeRowIncr()
-		if err = _excel.SetSheetRow(s.Name, row, &s.Header); err != nil {
-			return
-		}
-		if err = _excel.SetRowStyle(s.Name, s.writeRow, s.writeRow, f.StyleLocked()); err != nil {
-			return
-		}
-	}
-
-	// 判断是否有预置数据并设置
-	if len(s.Data) != 0 {
-		for _, d := range s.Data {
-			var (
-				row  = s.writeRowIncr()
-				name string
-				i    int
-			)
-			if name, i, err = excelize.SplitCellName(row); err != nil {
-				return
-			}
-
-			for index, o := range d {
-				var number int
-				if number, err = excelize.ColumnNameToNumber(name); err != nil {
-					return
-				}
-
-				var cellName string
-				if cellName, err = excelize.CoordinatesToCellName(number+index, i); err != nil {
-					return
-				}
-				if err = _excel.SetCellValue(s.Name, cellName, o); err != nil {
 					return
 				}
 			}

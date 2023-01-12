@@ -14,9 +14,9 @@ func TestNewSheet(t *testing.T) {
 	}
 
 	newSheet := NewSheet(
-		SetName(testName),
+		Name(testName),
 		Notice(testNotice),
-		SetHeader(testHeader),
+		Header(testHeader),
 		Data([][]any{{"s123", "123"}, {"123123"}, {"123123"}}),
 	)
 
@@ -32,9 +32,9 @@ func TestSheet_writeRowIncrWrite(t *testing.T) {
 	)
 
 	newSheet := NewSheet(
-		SetName(testName),
+		Name(testName),
 		Notice(testNotice),
-		SetHeader(testHeader),
+		Header(testHeader),
 		Data([][]any{{"s123", "123"}, {"123123"}, {"123123"}}),
 	)
 
