@@ -1,48 +1,41 @@
 package excelizex
 
-import "github.com/xuri/excelize/v2"
+import (
+	"github.com/cyclonevox/excelizex/style"
+)
 
-func (f *File) StyleNumFmtText() int {
+func (f *File) styleNumFmtText() int {
 	var (
-		style int
-		err   error
+		styleId int
+		err     error
 	)
-	if style, err = f._excel.NewStyle(&excelize.Style{NumFmt: 49}); nil != err {
+	if styleId, err = f._excel.NewStyle(style.NumFmtText); nil != err {
 		panic(err)
 	}
 
-	return style
+	return styleId
 }
 
-func (f *File) DefaultNoticeStyleLocked() int {
+func (f *File) defaultNoticeStyleLocked() int {
 	var (
-		style int
-		err   error
+		styleId int
+		err     error
 	)
-	if style, err = f._excel.NewStyle(&excelize.Style{
-		Font: &excelize.Font{
-			Bold:   true,
-			Family: "微软雅黑",
-			Size:   11,
-			Color:  "#FF0000",
-		},
-		Alignment:  &excelize.Alignment{WrapText: true},
-		Protection: &excelize.Protection{Locked: true},
-	}); err != nil {
+	if styleId, err = f._excel.NewStyle(style.DefaultNoticeStyle); err != nil {
 		panic(err)
 	}
 
-	return style
+	return styleId
 }
 
-func (f *File) StyleLocked() int {
+func (f *File) styleLocked() int {
 	var (
-		style int
-		err   error
+		styleId int
+		err     error
 	)
-	if style, err = f._excel.NewStyle(&excelize.Style{Protection: &excelize.Protection{Locked: true}}); nil != err {
+	if styleId, err = f._excel.NewStyle(style.StyleLocked); nil != err {
 		panic(err)
 	}
 
-	return style
+	return styleId
 }

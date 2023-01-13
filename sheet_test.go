@@ -38,14 +38,14 @@ func TestSheet_writeRowIncrWrite(t *testing.T) {
 		Data([][]any{{"s123", "123"}, {"123123"}, {"123123"}}),
 	)
 
-	testRowName = newSheet.writeRowIncr()
+	testRowName = newSheet.nextWriteRow()
 	exceptRowName = "A1"
 
 	if testRowName != exceptRowName {
 		t.Fatalf("expect %+v,but %+v", exceptRowName, testRowName)
 	}
 
-	testRowName = newSheet.writeRowIncr(3)
+	testRowName = newSheet.nextWriteRow(3)
 	exceptRowName = "A4"
 
 	if testRowName != exceptRowName {

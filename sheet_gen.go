@@ -10,7 +10,7 @@ func singleRowData(single any) (list []any) {
 	val := reflect.ValueOf(single)
 
 	switch typ.Kind() {
-	// 对于结构体会获取含有excel结构体的数值
+	// 对于结构体会获取字段含有excel标签的标签值
 	case reflect.Struct:
 		for j := 0; j < typ.NumField(); j++ {
 			field := typ.Field(j)
@@ -51,7 +51,7 @@ func genDataSheet(slice any, option ...SheetOption) (Sheet *Sheet) {
 	}
 
 	if reflect.ValueOf(slice).Kind() != reflect.Ptr || typ.Kind() != reflect.Slice {
-		panic(errors.New("generate sheet function by Data support using Slice prt only"))
+		panic(errors.New("generate sheet function by DataRow support using Slice prt only"))
 	}
 
 	for i := 0; i < val.Len(); i++ {

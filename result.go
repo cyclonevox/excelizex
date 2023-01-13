@@ -1,5 +1,7 @@
 package excelizex
 
+import "github.com/xuri/excelize/v2"
+
 type Result struct {
 	sector       int
 	dataStartRow int
@@ -20,7 +22,7 @@ func (r *Result) Next() bool {
 	return len(r.Errors)+len(r.HeaderNotice) >= r.sector+1
 }
 
-func (r *Result) Data() (data any) {
+func (r *Result) DataRow() (data []excelize.Cell) {
 	if r.sector < len(r.HeaderNotice) {
 		data = r.HeaderNotice[r.sector]
 	} else {
@@ -28,7 +30,8 @@ func (r *Result) Data() (data any) {
 	}
 
 	r.sector++
-	return data
+
+	return
 }
 
 func (r *Result) Close() error {

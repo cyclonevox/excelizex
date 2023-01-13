@@ -105,15 +105,19 @@ func (s *Sheet) Excel() *File {
 	return New().AddSheets(s)
 }
 
-// writeRowIncr 会获取目前该写入的行
+// nextWriteRow 会获取目前该写入的行
 // 每次调用该方法表示行数增长 返回 A1 A2... 等名称
-func (s *Sheet) writeRowIncr(num ...int) string {
+func (s *Sheet) nextWriteRow(num ...int) string {
 	if len(num) > 0 {
 		s.writeRow += num[0]
 	} else {
 		s.writeRow++
 	}
 
+	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
+}
+
+func (s *Sheet) getWriteRow() string {
 	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
 }
 

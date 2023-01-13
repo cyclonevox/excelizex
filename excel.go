@@ -190,7 +190,7 @@ func (f *File) setColumnsText(s *Sheet) (err error) {
 			return
 		}
 
-		if err = f.excel().SetColStyle(s.Name, colName, f.StyleNumFmtText()); nil != err {
+		if err = f.excel().SetColStyle(s.Name, colName, f.styleNumFmtText()); nil != err {
 			return
 		}
 	}
@@ -211,7 +211,7 @@ func (f *File) writeNotice(s *Sheet) (err error) {
 		}
 		max = max/4 + 1
 
-		row := s.writeRowIncr()
+		row := s.nextWriteRow()
 		if err = f.excel().SetCellValue(s.Name, row, s.Notice); err != nil {
 			return
 		}
@@ -225,7 +225,7 @@ func (f *File) writeNotice(s *Sheet) (err error) {
 		if err = f.excel().SetRowHeight(s.Name, 1, float64(16*(len(lines)))); err != nil {
 			return
 		}
-		if err = f.excel().SetCellStyle(s.Name, row, row, f.DefaultNoticeStyleLocked()); nil != err {
+		if err = f.excel().SetCellStyle(s.Name, row, row, f.defaultNoticeStyleLocked()); nil != err {
 			return
 		}
 	}
@@ -236,11 +236,11 @@ func (f *File) writeNotice(s *Sheet) (err error) {
 func (f *File) writeHeader(s *Sheet) (err error) {
 	// 判断是否有提示并设置
 	if len(s.Header) != 0 {
-		row := s.writeRowIncr()
+		row := s.nextWriteRow()
 		if err = f.excel().SetSheetRow(s.Name, row, &s.Header); err != nil {
 			return
 		}
-		if err = f.excel().SetRowStyle(s.Name, s.writeRow, s.writeRow, f.StyleLocked()); err != nil {
+		if err = f.excel().SetRowStyle(s.Name, s.writeRow, s.writeRow, f.styleLocked()); err != nil {
 			return
 		}
 	}
@@ -253,7 +253,7 @@ func (f *File) writeData(s *Sheet) (err error) {
 	if len(s.Data) != 0 {
 		for _, d := range s.Data {
 			var (
-				row  = s.writeRowIncr()
+				row  = s.nextWriteRow()
 				name string
 				i    int
 			)
