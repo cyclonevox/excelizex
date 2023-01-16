@@ -31,11 +31,11 @@ func New(reader ...io.Reader) *File {
 	return &File{_excel: excelize.NewFile()}
 }
 
-func (f *File) SelectSheet(sheetName string, password ...string) (file *File, err error) {
+func (f *File) SelectSheet(sheetName string, password ...string) (file *File) {
 	f.selectSheetName = sheetName
 
 	if len(password) > 0 {
-		if err = f.excel().UnprotectSheet(f.selectSheetName, password[0]); nil != err {
+		if err := f.excel().UnprotectSheet(f.selectSheetName, password[0]); nil != err {
 			return
 		}
 	}
