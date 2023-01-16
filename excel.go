@@ -187,25 +187,18 @@ func (f *File) writeDefaultFormatSheet(s *Sheet) (err error) {
 }
 
 func (f *File) setColumnsText(s *Sheet) (err error) {
-	var max int
 	var colName string
 	// 设置表各列数据格式 数字默认为“文本”
 	for i := range s.Header {
 		if colName, err = excelize.ColumnNumberToName(1 + i); nil != err {
 			return
 		}
-
 		if err = f.excel().SetColStyle(s.Name, colName, f.styleNumFmtText()); nil != err {
 			return
 		}
-
-		if max < utf8.RuneCount([]byte(s.Header[i])) {
-			max = utf8.RuneCount([]byte(s.Header[i]))
+		if err = f.excel().SetColWidth(s.Name, colName, colName, float64(8*utf8.RuneCount([]byte(s.Header[i]))/4+1)); err != nil {
+			return
 		}
-	}
-
-	if err = f.excel().SetColWidth(s.Name, "A", colName, float64(8*max/4+1)); err != nil {
-		return
 	}
 
 	return
