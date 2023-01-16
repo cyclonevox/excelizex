@@ -1,5 +1,7 @@
 package excelizex
 
+import "reflect"
+
 // 下拉结构，包含对应的列和具体的选项
 type pullDown struct {
 	target  map[string]*PullDownData
@@ -11,44 +13,42 @@ type PullDownData struct {
 	data []any
 }
 
-func NewPullDown() *pullDown {
+func newPullDown() *pullDown {
 	return &pullDown{target: make(map[string]*PullDownData)}
 }
 
-// Merges 合并多个下拉对象至目标下拉对象中
-func (p *pullDown) Merges(pds []*pullDown) *pullDown {
-	for _, pd := range pds {
-		p.Merge(pd)
-	}
-
-	return p
-}
-
 // Merge 合并一个下拉对象至目标下拉对象中
-func (p *pullDown) Merge(pd *pullDown) *pullDown {
+func (p *pullDown) merge(pd *pullDown) *pullDown {
 	for axis, pullDownData := range pd.target {
-		p.AddOptions(axis, pullDownData.data)
+		p.addOptions(axis, pullDownData.data)
 	}
 
 	return p
 }
 
-func (p *pullDown) AddOptions(col string, options []any) *pullDown {
-	for _, o := range options {
-		p.AddOption(col, o)
-	}
-
-	return p
-}
-
-func (p *pullDown) AddOption(col string, option any) {
-	if pd, ok := p.target[col]; ok {
-		pd.data = append(pd.data, option)
+func (p *pullDown) addOptions(col string, options any) *pullDown {
+	var (
+		typ  = reflect.TypeOf(options)
+		val  = reflect.ValueOf(options)
+		list []any
+	)
+	if typ.Kind() == reflect.Slice {
+		for i := 0; i < val.Len(); i++ {
+			list = append(list, val.Index(i).Interface())
+		}
 	} else {
-		pdd := &PullDownData{col: col, data: []any{option}}
+		list = append(list, val.Interface())
+	}
+
+	if pd, ok := p.target[col]; ok {
+		pd.data = append(pd.data, list...)
+	} else {
+		pdd := &PullDownData{col: col, data: list}
 		p.options = append(p.options, pdd)
 		p.target[col] = pdd
 	}
+
+	return p
 }
 
 func (p *pullDown) sheet(name string) *Sheet {

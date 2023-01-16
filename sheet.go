@@ -2,6 +2,7 @@ package excelizex
 
 import (
 	"errors"
+	"github.com/xuri/excelize/v2"
 	"reflect"
 	"strconv"
 )
@@ -85,16 +86,33 @@ func (s *Sheet) SetData(data [][]any) *Sheet {
 }
 
 // SetOptions 设置下拉的选项
-func (s *Sheet) SetOptions(pds ...*pullDown) *Sheet {
-	for _, pd := range pds {
-		if s.pd == nil {
-			s.pd = pd
-		} else {
-			s.pd.Merge(pd)
-		}
+func (s *Sheet) SetOptions(headerName string, options any) *Sheet {
+	columnName, err := s.findHeaderColumnName(headerName)
+	if err != nil {
+		panic(err)
+	}
+
+	pd := newPullDown().addOptions(columnName, options)
+
+	if s.pd == nil {
+		s.pd = pd
+	} else {
+		s.pd.merge(pd)
 	}
 
 	return s
+}
+
+func (s *Sheet) findHeaderColumnName(header string) (columnName string, err error) {
+	for i, h := range s.Header {
+		if h == header {
+			columnName, err = excelize.ColumnNumberToName(i + 1)
+
+			return
+		}
+	}
+
+	return
 }
 
 func (s *Sheet) Excel() *File {
@@ -161,8 +179,8 @@ func Data(data [][]any) SheetOption {
 	}
 }
 
-func Options(pds ...*pullDown) SheetOption {
+func Options(headerName string, options any) SheetOption {
 	return func(s *Sheet) {
-		s.SetOptions(pds...)
+		s.SetOptions(headerName, options)
 	}
 }

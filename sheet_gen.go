@@ -24,10 +24,9 @@ func singleRowData(row any) (list []any) {
 	// 对于切片类型会直接转为[]any
 	// 只支持int string float类型的切片
 	case reflect.Slice:
-		value := reflect.ValueOf(row)
-		rsp := make([]interface{}, 0, value.Len())
-		for i := 0; i < value.Len(); i++ {
-			rsp = append(rsp, value.Index(i).Interface())
+		rsp := make([]interface{}, 0, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			rsp = append(rsp, val.Index(i).Interface())
 		}
 
 		return rsp
