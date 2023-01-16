@@ -24,7 +24,10 @@ func TestFile_SetResults(t *testing.T) {
 
 	rows, err := f.excel().GetRows(testName)
 
-	f, exist := f.SetResults(&results)
+	f, exist, err := f.SetResults(&results)
+	if err != nil {
+		panic(err)
+	}
 	if exist {
 		rows, err = f.excel().GetRows(testName)
 		if err != nil {

@@ -1,7 +1,6 @@
 package excelizex
 
 import (
-	"github.com/xuri/excelize/v2"
 	"reflect"
 	"testing"
 )
@@ -12,13 +11,15 @@ type testStream struct {
 }
 
 func (t *testStream) Next() bool {
-	return len(t.TestData) >= t.sector+1
+	return len(t.TestData)+1 >= t.sector+1
 }
 
-func (t *testStream) DataRow() (data []excelize.Cell, excelFunc ExcelFunc) {
-	data = append(data, excelize.Cell{Value: t.TestData[t.sector].Name})
-	data = append(data, excelize.Cell{Value: t.TestData[t.sector].Sex})
-	data = append(data, excelize.Cell{Value: t.TestData[t.sector].HelloWorld})
+func (t *testStream) DataRow() (data []any) {
+	if t.sector == 0 {
+		data = singleRowData(*t)
+	} else {
+		data = singleRowData(t.TestData[t.sector-1])
+	}
 
 	t.sector++
 
@@ -42,7 +43,7 @@ func TestFile_StreamWriteIn(t *testing.T) {
 
 	testFile := New()
 
-	if err := testFile.AddSheetByStream(&test, NewSheet(Name(testName), Notice(testNotice))); err != nil {
+	if err := testFile.AddSheetByStream(&test, NewSheet(Name(testName))); err != nil {
 		t.Fatal("TestFile_StreamWriteIn", "写入数据表错误:", err)
 	}
 

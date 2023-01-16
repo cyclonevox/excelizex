@@ -5,9 +5,9 @@ import (
 	"reflect"
 )
 
-func singleRowData(single any) (list []any) {
-	typ := reflect.TypeOf(single)
-	val := reflect.ValueOf(single)
+func singleRowData(row any) (list []any) {
+	typ := reflect.TypeOf(row)
+	val := reflect.ValueOf(row)
 
 	switch typ.Kind() {
 	// 对于结构体会获取字段含有excel标签的标签值
@@ -24,7 +24,7 @@ func singleRowData(single any) (list []any) {
 	// 对于切片类型会直接转为[]any
 	// 只支持int string float类型的切片
 	case reflect.Slice:
-		value := reflect.ValueOf(single)
+		value := reflect.ValueOf(row)
 		rsp := make([]interface{}, 0, value.Len())
 		for i := 0; i < value.Len(); i++ {
 			rsp = append(rsp, value.Index(i).Interface())

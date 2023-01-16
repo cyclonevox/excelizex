@@ -121,6 +121,12 @@ func (s *Sheet) getWriteRow() string {
 	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
 }
 
+func (s *Sheet) resetWriteRow() string {
+	s.writeRow = 1
+
+	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
+}
+
 type SheetOption = func(*Sheet)
 
 func Name(name string) SheetOption {

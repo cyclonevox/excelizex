@@ -103,9 +103,8 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 	}
 
 	var (
-		row           int
-		headerFound   bool
-		noticeColumns []string
+		row         int
+		headerFound bool
 	)
 	for rows.Next() {
 		row++
@@ -119,12 +118,6 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 			headerFound = reflect.DeepEqual(columns, headers)
 			results.Header = headers
 			results.dataStartRow = row + 1
-
-			if !headerFound {
-				noticeColumns = columns
-			} else {
-				results.Notice = noticeColumns
-			}
 
 			continue
 		}
@@ -181,11 +174,6 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 			continue
 		}
 	}
-
-	if err = f.removeDataLine(results); err != nil {
-		panic(err)
-	}
-	results.HeaderNotice = append(results.HeaderNotice, results.Notice, append(results.Header, "错误原因"))
 
 	return results
 }
