@@ -13,7 +13,7 @@ func TestFile_SetResults(t *testing.T) {
 		Name(testName),
 		Notice(testNotice),
 		Data([][]any{{"测试人员1", "无", "123123123"}, {"测试人员2", "公", "helloWorld"}}),
-		Options(NewPullDown().AddOptions("B", []any{"男", "女"})),
+		Options("B", []any{"男", "女"}),
 	)
 
 	results := f.SelectSheet(testName).Read(vava, func() error {

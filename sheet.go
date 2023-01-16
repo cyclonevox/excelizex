@@ -86,13 +86,13 @@ func (s *Sheet) SetData(data [][]any) *Sheet {
 }
 
 // SetOptions 设置下拉的选项
-func (s *Sheet) SetOptions(headerName string, options any) *Sheet {
-	columnName, err := s.findHeaderColumnName(headerName)
+func (s *Sheet) SetOptions(headOrColName string, options any) *Sheet {
+	name, err := s.findHeaderColumnName(headOrColName)
 	if err != nil {
 		panic(err)
 	}
 
-	pd := newPullDown().addOptions(columnName, options)
+	pd := newPullDown().addOptions(name, options)
 
 	if s.pd == nil {
 		s.pd = pd
@@ -103,16 +103,16 @@ func (s *Sheet) SetOptions(headerName string, options any) *Sheet {
 	return s
 }
 
-func (s *Sheet) findHeaderColumnName(header string) (columnName string, err error) {
+func (s *Sheet) findHeaderColumnName(headOrColName string) (columnName string, err error) {
 	for i, h := range s.Header {
-		if h == header {
+		if h == headOrColName {
 			columnName, err = excelize.ColumnNumberToName(i + 1)
 
 			return
 		}
 	}
 
-	return
+	return headOrColName, nil
 }
 
 func (s *Sheet) Excel() *File {
