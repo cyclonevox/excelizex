@@ -215,11 +215,11 @@ func (f *File) writeNotice(s *Sheet) (err error) {
 		if err = f.excel().SetCellValue(s.Name, row, s.Notice); err != nil {
 			return
 		}
-		var colunmNumber string
-		if colunmNumber, err = excelize.ColumnNumberToName(max); err != nil {
+		var columnNumber string
+		if columnNumber, err = excelize.ColumnNumberToName(max); err != nil {
 			return
 		}
-		if err = f.excel().MergeCell(s.Name, row, colunmNumber+"1"); err != nil {
+		if err = f.excel().MergeCell(s.Name, row, columnNumber+"1"); err != nil {
 			return
 		}
 		if err = f.excel().SetRowHeight(s.Name, 1, float64(16*(len(lines)))); err != nil {

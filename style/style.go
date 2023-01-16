@@ -9,10 +9,9 @@ var DefaultNoticeStyle = &excelize.Style{
 		Size:   11,
 		Color:  "#FF0000",
 	},
-	Alignment:  &excelize.Alignment{WrapText: true},
-	Protection: &excelize.Protection{Locked: true},
+	Alignment: &excelize.Alignment{WrapText: true},
 }
 
-var NumFmtText = &excelize.Style{NumFmt: 49}
+var NumFmtText = &excelize.Style{NumFmt: 49, Protection: &excelize.Protection{Locked: false}}
 
-var StyleLocked = &excelize.Style{Protection: &excelize.Protection{Locked: true}}
+var Locked = &excelize.Style{Protection: &excelize.Protection{Locked: true}}

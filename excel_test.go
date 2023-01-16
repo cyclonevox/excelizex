@@ -30,7 +30,7 @@ func TestSetNotice(t *testing.T) {
 4. 用户组为非必填项。用户组名称需在2 - 30个字符之间，头尾不允许空格。若填写此项，则代表该用户加入指定用户组。若该用户组已经在本机构存在，则意为加入该用户组（不影响现有用户组成员）`,
 			).SetName("下拉菜单测试")
 
-		if err := New().AddSheets(sheet).SaveAs("./test_file/pull_down.xlsx"); err != nil {
+		if err := New().AddSheets(sheet).SaveAs("./test_file/pull_down.xlsx", "test1234"); err != nil {
 			t.Fatal(err)
 		}
 	})

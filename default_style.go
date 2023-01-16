@@ -33,7 +33,7 @@ func (f *File) styleLocked() int {
 		styleId int
 		err     error
 	)
-	if styleId, err = f._excel.NewStyle(style.StyleLocked); nil != err {
+	if styleId, err = f._excel.NewStyle(style.Locked); nil != err {
 		panic(err)
 	}
 
