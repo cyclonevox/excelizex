@@ -22,6 +22,67 @@ func ReadFormFile(reader io.Reader) *File {
 	return &f
 }
 
+type headerInfo struct {
+	// 存储header原始数据
+	headers []string
+	// k:columns index v:Header name
+	colsIndexHeaderMap map[int]string
+	// k:header v:Struct Field Name
+	headerFieldName map[string]string
+}
+
+func newHeaderInfo() *headerInfo {
+	return &headerInfo{
+		headers:            make([]string, 0),
+		colsIndexHeaderMap: make(map[int]string, 0),
+		headerFieldName:    make(map[string]string),
+	}
+}
+
+func (e *headerInfo) addHeader(header string) {
+	e.headers = append(e.headers, header)
+}
+
+func (e *headerInfo) addHeaders(headers []string) {
+	e.headers = append(e.headers, headers...)
+}
+
+func (e *headerInfo) addHeaderFieldName(header, fieldName string) {
+	e.headerFieldName[header] = fieldName
+}
+
+func (e *headerInfo) findHeadersMap(columns []string) (exist bool) {
+	if len(columns) < len(e.headers) {
+		return
+	}
+
+	for index, column := range columns {
+		for _, h := range e.headers {
+			if column == h {
+				e.colsIndexHeaderMap[index] = column
+
+				continue
+			}
+		}
+	}
+
+	if len(e.colsIndexHeaderMap) == len(e.headers) {
+		exist = true
+	} else {
+		e.colsIndexHeaderMap = make(map[int]string, 0)
+	}
+
+	return
+}
+
+func (e *headerInfo) getHeader(columnIndex int) (header string) {
+	return e.colsIndexHeaderMap[columnIndex]
+}
+
+func (e *headerInfo) getHeaderFieldName(columnIndex int) (header string) {
+	return e.headerFieldName[e.getHeader(columnIndex)]
+}
+
 type ConvertFunc func(rawData string) (any, error)
 
 // SetConvert 作为设置该excel 文件的转换器
@@ -78,22 +139,17 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		panic(errors.New("read function support struct type variable's Pointer type only"))
 	}
 
-	// 获取结构体中对应的字段和转换器名称等
-	var (
-		headers []string
-		// k:columns data v:convert tag name
-		dataConvert = make(map[string]string)
-		// k:header v:Struct Field Name
-		headerFieldName = make(map[string]string)
-	)
+	_headerInfo := newHeaderInfo()
+	// k:columns data v:convert tag name
+	dataConvert := make(map[string]string)
 
 	for j := 0; j < typ.Elem().NumField(); j++ {
 		field := val.Elem().Type().Field(j)
 
 		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
-			headers = append(headers, hasTag)
-			headerFieldName[hasTag] = field.Name
+			_headerInfo.addHeader(hasTag)
+			_headerInfo.addHeaderFieldName(hasTag, field.Name)
 
 			convTag := field.Tag.Get("excel-conv")
 			if convTag != "" {
@@ -113,20 +169,20 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 			panic(err)
 		}
 
-		// 寻找表头，并将行数与关联存于map作为缓存
+		// 寻找表头，并将行数与关联存于map作为缓存,并将关联的表存储进
 		if !headerFound {
-			headerFound = reflect.DeepEqual(columns, headers)
-			results.Header = headers
+			headerFound = _headerInfo.findHeadersMap(columns)
+			results.Header = _headerInfo.headers
 			results.dataStartRow = row + 1
 
 			continue
 		}
 		// 将值加入结构体
 		for index, col := range columns {
-			field := reflect.ValueOf(ptr).Elem().FieldByName(headerFieldName[headers[index]])
+			field := reflect.ValueOf(ptr).Elem().FieldByName(_headerInfo.getHeaderFieldName(index))
 
 			// 查看该字段是否有转换器
-			if v, ok := dataConvert[headers[index]]; ok {
+			if v, ok := dataConvert[_headerInfo.getHeader(index)]; ok {
 				var convertValue any
 				if convertValue, err = f.convert[v](col); err != nil {
 					results.Errors = append(results.Errors, ErrorInfo{
