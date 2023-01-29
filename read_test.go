@@ -10,7 +10,7 @@ import (
 type readTestStruct struct {
 	Id   int64  `excel:"埃低"`
 	Name string `excel:"名称"`
-	List []struct {
+	List []*struct {
 		Id int64
 	} `excel:"列表" excel-conv:"list"`
 }
@@ -21,7 +21,7 @@ func listConvert(rawData string) (any, error) {
 		return nil, err
 	}
 
-	return []struct{ Id int64 }{{i}}, nil
+	return []*struct{ Id int64 }{{i}}, nil
 }
 
 func TestConvertRead(t *testing.T) {
@@ -33,14 +33,14 @@ func TestConvertRead(t *testing.T) {
 	s := new(readTestStruct)
 
 	var expectPtr = []*readTestStruct{
-		{103, "张3", []struct{ Id int64 }{{123}}},
-		{104, "张4", []struct{ Id int64 }{{124}}},
-		{105, "张5", []struct{ Id int64 }{{125}}},
-		{106, "张6", []struct{ Id int64 }{{126}}},
-		{107, "张7", []struct{ Id int64 }{{127}}},
-		{108, "张8", []struct{ Id int64 }{{128}}},
-		{109, "张9", []struct{ Id int64 }{{129}}},
-		{110, "张10", []struct{ Id int64 }{{130}}},
+		{103, "张3", []*struct{ Id int64 }{{123}}},
+		{104, "张4", []*struct{ Id int64 }{{124}}},
+		{105, "张5", []*struct{ Id int64 }{{125}}},
+		{106, "张6", []*struct{ Id int64 }{{126}}},
+		{107, "张7", []*struct{ Id int64 }{{127}}},
+		{108, "张8", []*struct{ Id int64 }{{128}}},
+		{109, "张9", []*struct{ Id int64 }{{129}}},
+		{110, "张10", []*struct{ Id int64 }{{130}}},
 	}
 
 	var sListPtr []*readTestStruct
@@ -60,14 +60,14 @@ func TestConvertRead(t *testing.T) {
 	}
 
 	var expect = []readTestStruct{
-		{103, "张3", []struct{ Id int64 }{{123}}},
-		{104, "张4", []struct{ Id int64 }{{124}}},
-		{105, "张5", []struct{ Id int64 }{{125}}},
-		{106, "张6", []struct{ Id int64 }{{126}}},
-		{107, "张7", []struct{ Id int64 }{{127}}},
-		{108, "张8", []struct{ Id int64 }{{128}}},
-		{109, "张9", []struct{ Id int64 }{{129}}},
-		{110, "张10", []struct{ Id int64 }{{130}}},
+		{103, "张3", []*struct{ Id int64 }{{123}}},
+		{104, "张4", []*struct{ Id int64 }{{124}}},
+		{105, "张5", []*struct{ Id int64 }{{125}}},
+		{106, "张6", []*struct{ Id int64 }{{126}}},
+		{107, "张7", []*struct{ Id int64 }{{127}}},
+		{108, "张8", []*struct{ Id int64 }{{128}}},
+		{109, "张9", []*struct{ Id int64 }{{129}}},
+		{110, "张10", []*struct{ Id int64 }{{130}}},
 	}
 
 	var sList []readTestStruct

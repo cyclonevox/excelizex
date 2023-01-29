@@ -30,7 +30,7 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 		exist = true
 	}
 
-	// 移除非错误行
+	// 移除所有行
 	if err = f.removeDataLine(*result); err != nil {
 		return
 	}
@@ -44,21 +44,16 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 		}
 	}
 
-	var (
-		i          = result.dataStartRow
-		columnName string
-	)
+	var columnName string
 	if columnName, err = excelize.ColumnNumberToName(len(result.Header)); err != nil {
 		return
 	}
-	for _, errorInfo := range result.Errors {
-		columnName = "A" + strconv.FormatInt(int64(i), 10)
+	for index, errorInfo := range result.Errors {
+		columnName = "A" + strconv.FormatInt(int64(index), 10)
 		str := append(errorInfo.RawData, errorInfo.ErrorInfo...)
 		if err = f.excel().SetSheetRow(f.selectSheetName, columnName, &str); err != nil {
 			return
 		}
-
-		i++
 	}
 
 	file = f
