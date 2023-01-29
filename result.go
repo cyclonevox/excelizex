@@ -44,14 +44,19 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 		}
 	}
 
-	var columnName string
-	if columnName, err = excelize.ColumnNumberToName(len(result.Header)); err != nil {
+	var errorInfoColumnName string
+	if errorInfoColumnName, err = excelize.ColumnNumberToName(len(result.Header)); err != nil {
 		return
 	}
+
 	for index, errorInfo := range result.Errors {
-		columnName = "A" + strconv.FormatInt(int64(index), 10)
-		str := append(errorInfo.RawData, errorInfo.ErrorInfo...)
-		if err = f.excel().SetSheetRow(f.selectSheetName, columnName, &str); err != nil {
+		cellName := "A" + strconv.FormatInt(int64(result.dataStartRow+index), 10)
+		if err = f.excel().SetSheetRow(f.selectSheetName, cellName, &errorInfo.RawData); err != nil {
+			return
+		}
+
+		errorInfoCellName := errorInfoColumnName + strconv.FormatInt(int64(result.dataStartRow+index), 10)
+		if err = f.excel().SetSheetRow(f.selectSheetName, errorInfoCellName, &errorInfo.ErrorInfo); err != nil {
 			return
 		}
 	}

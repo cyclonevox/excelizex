@@ -1,6 +1,7 @@
 package excelizex
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/cyclonevox/excelizex/validatorx"
 	"github.com/xuri/excelize/v2"
@@ -266,7 +267,20 @@ func importData(data any, fn ImportFunc) (errInfo []string) {
 
 	// 执行导入业务
 	if err := fn(); err != nil {
-		errInfo = append(errInfo, err.Error())
+		valid := json.Valid([]byte(err.Error()))
+
+		if !valid {
+			errInfo = append(errInfo, err.Error())
+		} else {
+
+			// don't ask why
+			var e = struct {
+				Message string `json:"message"`
+			}{}
+
+			_ = json.Unmarshal([]byte(err.Error()), &e)
+			errInfo = append(errInfo, e.Message)
+		}
 
 		return
 	}
