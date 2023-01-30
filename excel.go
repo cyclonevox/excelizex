@@ -230,7 +230,7 @@ func (f *File) writeNotice(s *Sheet) (err error) {
 		if err = f.excel().MergeCell(s.Name, row, columnNumber+"1"); err != nil {
 			return
 		}
-		if err = f.excel().SetRowHeight(s.Name, 1, float64(16*(len(lines)))); err != nil {
+		if err = f.excel().SetRowHeight(s.Name, 1, float64(17*(len(lines)))); err != nil {
 			return
 		}
 		if err = f.excel().SetCellStyle(s.Name, row, row, f.defaultNoticeStyleLocked()); nil != err {
