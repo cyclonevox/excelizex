@@ -258,8 +258,8 @@ func (f *File) removeDataLine(results Result) (err error) {
 func importData(data any, fn ImportFunc) (errInfo []string) {
 	// 验证结构体数据是否合法
 	if err, m := validatorx.New().Struct(data); nil != err {
-		for _, v := range m {
-			errInfo = append(errInfo, v)
+		if len(m) > 0 {
+			errInfo = append(errInfo, "该行有数据未正确填写")
 		}
 
 		return
