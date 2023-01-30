@@ -196,7 +196,7 @@ func (f *File) setColumnsText(s *Sheet) (err error) {
 		if err = f.excel().SetColStyle(s.Name, colName, f.styleNumFmtText()); nil != err {
 			return
 		}
-		if err = f.excel().SetColWidth(s.Name, colName, colName, float64(8*utf8.RuneCount([]byte(s.Header[i]))/4+1)); err != nil {
+		if err = f.excel().SetColWidth(s.Name, colName, colName, float64(9*utf8.RuneCount([]byte(s.Header[i]))/4+1)); err != nil {
 			return
 		}
 	}
@@ -213,7 +213,9 @@ func (f *File) writeNotice(s *Sheet) (err error) {
 			lines = strings.Split(s.Notice, "\n")
 		)
 		for _, line := range lines {
-			max = utf8.RuneCount([]byte(line))
+			if max < utf8.RuneCount([]byte(line)) {
+				max = utf8.RuneCount([]byte(line))
+			}
 		}
 		max = max/4 + 1
 
