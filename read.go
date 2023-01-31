@@ -179,7 +179,11 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		}
 		// 将值加入结构体
 		for index, col := range columns {
-			field := reflect.ValueOf(ptr).Elem().FieldByName(_headerInfo.getHeaderFieldName(index))
+			fieldNname := _headerInfo.getHeaderFieldName(index)
+			if fieldNname == "" {
+				continue
+			}
+			field := reflect.ValueOf(ptr).Elem().FieldByName(fieldNname)
 
 			// 查看该字段是否有转换器
 			if v, ok := dataConvert[_headerInfo.getHeader(index)]; ok {
