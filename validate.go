@@ -18,3 +18,7 @@ func newValidate() *validate {
 func (v *validate) Validate(i interface{}) error {
 	return v.validator.Struct(i)
 }
+
+func (v *validate) ValidateVal(i interface{}, tag string) error {
+	return v.validator.Var(i, tag)
+}
