@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/xuri/excelize/v2"
 	"reflect"
+	"regexp"
 	"strconv"
 )
 
@@ -112,7 +113,14 @@ func (s *Sheet) findHeaderColumnName(headOrColName string) (columnName string, e
 		}
 	}
 
-	return headOrColName, nil
+	reg := regexp.MustCompile(`[A-Z]+`)
+	if !reg.MatchString(headOrColName) {
+		panic("plz use A-Z ColName or HeaderName for option name ")
+	}
+
+	columnName = headOrColName
+
+	return
 }
 
 func (s *Sheet) Excel() *File {
