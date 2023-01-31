@@ -113,7 +113,8 @@ func (s *Sheet) findHeaderColumnName(headOrColName string) (columnName string, e
 		}
 	}
 
-	reg := regexp.MustCompile(`[A-Z]+`)
+	regular := `[A-Z]+`
+	reg := regexp.MustCompile(regular)
 	if !reg.MatchString(headOrColName) {
 		panic("plz use A-Z ColName or HeaderName for option name ")
 	}
