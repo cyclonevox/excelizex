@@ -16,7 +16,9 @@ func TestFile_SetResults(t *testing.T) {
 		Options("B", []any{"男", "女"}),
 	)
 
-	results := f.SelectSheet(testName).Read(vava, func() error {
+	_ = f.SelectSheet(testName)
+
+	results := f.Read(vava, func() error {
 		fmt.Println(vava)
 
 		return nil
