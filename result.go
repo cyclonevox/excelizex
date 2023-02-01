@@ -11,7 +11,8 @@ type Result struct {
 	SheetName    string
 	Notice       string
 	Header       []string
-	Errors       ErrorInfos
+
+	errors ErrorInfos
 }
 
 type ErrorInfo struct {
@@ -22,9 +23,13 @@ type ErrorInfo struct {
 
 type ErrorInfos []ErrorInfo
 
+func (r *Result) addError(info ErrorInfo) {
+	r.errors = append(r.errors, info)
+}
+
 // SetResults 该方法会清除原始的表的数据。并将错误数据保留以及将错误原因写入原文件中
 func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
-	if result.dataStartRow == 0 || len(result.Errors) == 0 {
+	if result.dataStartRow == 0 || len(result.errors) == 0 {
 		return
 	} else {
 		exist = true
@@ -49,7 +54,7 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 		return
 	}
 
-	for index, errorInfo := range result.Errors {
+	for index, errorInfo := range result.errors {
 		cellName := "A" + strconv.FormatInt(int64(result.dataStartRow+index), 10)
 		if err = f.excel().SetSheetRow(f.selectSheetName, cellName, &errorInfo.RawData); err != nil {
 			return

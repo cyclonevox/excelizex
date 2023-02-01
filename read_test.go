@@ -44,8 +44,8 @@ func TestConvertRead(t *testing.T) {
 	}
 
 	var sListPtr []*readTestStruct
-	file.SelectSheet("测试用表").
-		SetConvert("list", listConvert).
+	_ = file.SelectSheet("测试用表")
+	file.SetConvert("list", listConvert).
 		Read(s, func() error {
 			data := *s
 			sListPtr = append(sListPtr, &data)
@@ -72,8 +72,8 @@ func TestConvertRead(t *testing.T) {
 
 	var sList []readTestStruct
 
-	file.SelectSheet("测试用表").
-		SetConvert("list", listConvert).
+	_ = file.SelectSheet("测试用表")
+	file.SetConvert("list", listConvert).
 		Read(s, func() error {
 			sList = append(sList, *s)
 

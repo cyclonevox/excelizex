@@ -162,6 +162,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		row         int
 		headerFound bool
 	)
+
 	for rows.Next() {
 		row++
 		var columns []string
@@ -172,8 +173,10 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		// 寻找表头，并将行数与关联存于map作为缓存,并将关联的表存储进
 		if !headerFound {
 			headerFound = _headerInfo.findHeadersMap(columns)
-			results.Header = _headerInfo.headers
-			results.dataStartRow = row + 1
+			if headerFound {
+				results.Header = _headerInfo.headers
+				results.dataStartRow = row + 1
+			}
 
 			continue
 		}
@@ -189,7 +192,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 			if v, ok := dataConvert[_headerInfo.getHeader(index)]; ok {
 				var convertValue any
 				if convertValue, err = f.convert[v](col); err != nil {
-					results.Errors = append(results.Errors, ErrorInfo{
+					results.addError(ErrorInfo{
 						ErrorRow:  row,
 						RawData:   columns,
 						ErrorInfo: []string{err.Error()},
@@ -225,13 +228,11 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		}
 
 		if info := importData(ptr, fn); len(info) > 0 {
-			results.Errors = append(results.Errors, ErrorInfo{
+			results.addError(ErrorInfo{
 				ErrorRow:  row,
 				RawData:   columns,
 				ErrorInfo: info,
 			})
-
-			continue
 		}
 	}
 
