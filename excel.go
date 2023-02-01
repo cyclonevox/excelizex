@@ -41,10 +41,16 @@ func (f *File) Unlock(password string) (file *File, err error) {
 	return f, nil
 }
 
-func (f *File) SelectSheet(sheetName string) *File {
-	f.selectSheetName = sheetName
+func (f *File) SelectSheet(sheetName string) bool {
+	for _, n := range f.excel().GetSheetList() {
+		if n == sheetName {
+			f.selectSheetName = sheetName
 
-	return f
+			return true
+		}
+	}
+
+	return false
 }
 
 func (f *File) excel() *excelize.File {
