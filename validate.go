@@ -1,8 +1,8 @@
 package excelizex
 
 import (
+	"github.com/cyclonevox/validatorx"
 	"github.com/go-playground/validator/v10"
-	"github.com/storezhang/validatorx"
 )
 
 type validate struct {

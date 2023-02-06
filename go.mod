@@ -3,6 +3,7 @@ module github.com/cyclonevox/excelizex
 go 1.18
 
 require (
+	github.com/cyclonevox/validatorx v1.0.27
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/xuri/excelize/v2 v2.6.1
 )
@@ -19,7 +20,6 @@ require (
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/storezhang/gox v1.4.10 // indirect
-	github.com/storezhang/validatorx v1.0.9
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
 	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect
 	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
