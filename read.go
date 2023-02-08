@@ -193,9 +193,9 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 				var convertValue any
 				if convertValue, err = f.convert[v](col); err != nil {
 					results.addError(ErrorInfo{
-						ErrorRow:  row,
-						RawData:   columns,
-						ErrorInfo: []string{err.Error()},
+						ErrorRow: row,
+						RawData:  columns,
+						Messages: []string{err.Error()},
 					})
 
 					continue
@@ -229,9 +229,9 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 
 		if info := importData(ptr, fn); len(info) > 0 {
 			results.addError(ErrorInfo{
-				ErrorRow:  row,
-				RawData:   columns,
-				ErrorInfo: info,
+				ErrorRow: row,
+				RawData:  columns,
+				Messages: info,
 			})
 		}
 	}

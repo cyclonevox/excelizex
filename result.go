@@ -16,9 +16,9 @@ type Result struct {
 }
 
 type ErrorInfo struct {
-	ErrorRow  int
-	RawData   []string
-	ErrorInfo []string
+	ErrorRow int
+	RawData  []string
+	Messages []string
 }
 
 type ErrorInfos []ErrorInfo
@@ -54,14 +54,21 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 		return
 	}
 
+	var lastRow int
 	for index, errorInfo := range result.errors {
+		if lastRow == errorInfo.ErrorRow {
+			continue
+		} else {
+			lastRow = errorInfo.ErrorRow
+		}
+
 		cellName := "A" + strconv.FormatInt(int64(result.dataStartRow+index), 10)
 		if err = f.excel().SetSheetRow(f.selectSheetName, cellName, &errorInfo.RawData); err != nil {
 			return
 		}
 
 		errorInfoCellName := errorInfoColumnName + strconv.FormatInt(int64(result.dataStartRow+index), 10)
-		if err = f.excel().SetSheetRow(f.selectSheetName, errorInfoCellName, &errorInfo.ErrorInfo); err != nil {
+		if err = f.excel().SetSheetRow(f.selectSheetName, errorInfoCellName, &errorInfo.Messages); err != nil {
 			return
 		}
 	}
