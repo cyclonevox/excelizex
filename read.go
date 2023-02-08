@@ -227,6 +227,10 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 
 		}
 
+		if len(results.errors) > 0 {
+			continue
+		}
+
 		if info := importData(ptr, fn); len(info) > 0 {
 			results.addError(ErrorInfo{
 				ErrorRow: row,
