@@ -198,7 +198,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 						Messages: []string{err.Error()},
 					})
 
-					continue
+					break
 				}
 
 				field.Set(reflect.ValueOf(convertValue))
