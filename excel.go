@@ -28,7 +28,7 @@ func New(reader ...io.Reader) *File {
 
 	}
 
-	return &File{_excel: excelize.NewFile()}
+	return &File{_excel: excelize.NewFile(), convert: make(map[string]ConvertFunc)}
 }
 
 func (f *File) Unlock(password string) (file *File, err error) {

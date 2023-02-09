@@ -27,6 +27,10 @@ func (r *Result) addError(info ErrorInfo) {
 	r.errors = append(r.errors, info)
 }
 
+func (e *ErrorInfo) addErrMessage(msg string) {
+	e.Messages = append(e.Messages, msg)
+}
+
 // SetResults 该方法会清除原始的表的数据。并将错误数据保留以及将错误原因写入原文件中
 func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 	if result.dataStartRow == 0 || len(result.errors) == 0 {

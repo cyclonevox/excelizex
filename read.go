@@ -29,13 +29,19 @@ type headerInfo struct {
 	colsIndexHeaderMap map[int]string
 	// k:header v:Struct Field Name
 	headerFieldName map[string]string
+	// k:header v:convert name
+	headerMappingConverter map[string]string
+	// file converter ptr
+	convertPtr *map[string]ConvertFunc
 }
 
-func newHeaderInfo() *headerInfo {
+func newHeaderInfo(f *File) *headerInfo {
 	return &headerInfo{
-		headers:            make([]string, 0),
-		colsIndexHeaderMap: make(map[int]string, 0),
-		headerFieldName:    make(map[string]string),
+		headers:                make([]string, 0),
+		colsIndexHeaderMap:     make(map[int]string, 0),
+		headerFieldName:        make(map[string]string),
+		headerMappingConverter: make(map[string]string),
+		convertPtr:             &f.convert,
 	}
 }
 
@@ -49,6 +55,10 @@ func (e *headerInfo) addHeaders(headers []string) {
 
 func (e *headerInfo) addHeaderFieldName(header, fieldName string) {
 	e.headerFieldName[header] = fieldName
+}
+
+func (e *headerInfo) addHeaderConvertName(header, convertName string) {
+	e.headerMappingConverter[header] = convertName
 }
 
 func (e *headerInfo) findHeadersMap(columns []string) (exist bool) {
@@ -79,8 +89,57 @@ func (e *headerInfo) getHeader(columnIndex int) (header string) {
 	return e.colsIndexHeaderMap[columnIndex]
 }
 
+func (e *headerInfo) findConvertByHeader(header string) (convertName string, exist bool) {
+	convertName, exist = e.headerMappingConverter[header]
+
+	return
+}
+
 func (e *headerInfo) getHeaderFieldName(columnIndex int) (header string) {
 	return e.headerFieldName[e.getHeader(columnIndex)]
+}
+
+func (e *headerInfo) dataMapping(ptr any, columns []string) (err error) {
+	for index, col := range columns {
+		fieldName := e.getHeaderFieldName(index)
+		if fieldName == "" {
+			continue
+		}
+		field := reflect.ValueOf(ptr).Elem().FieldByName(fieldName)
+
+		// 查看该字段是否有转换器
+		if v, ok := e.findConvertByHeader(e.getHeader(index)); ok {
+			var convertValue any
+			if convertValue, err = (*e.convertPtr)[v](col); err != nil {
+				return
+			}
+
+			field.Set(reflect.ValueOf(convertValue))
+
+			continue
+		}
+
+		switch field.Kind() {
+		case reflect.Float32, reflect.Float64:
+			var i float64
+			if i, err = strconv.ParseFloat(col, 64); nil != err {
+				panic(i)
+			}
+			field.SetFloat(i)
+		case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
+			var i int64
+			if i, err = strconv.ParseInt(col, 10, 64); nil != err {
+				panic(i)
+			}
+			field.SetInt(i)
+		case reflect.String:
+			field.SetString(col)
+		default:
+			panic("cannot support other type besides int,float,string")
+		}
+	}
+
+	return
 }
 
 type ConvertFunc func(rawData string) (any, error)
@@ -139,9 +198,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		panic(errors.New("read function support struct type variable's Pointer type only"))
 	}
 
-	_headerInfo := newHeaderInfo()
-	// k:columns data v:convert tag name
-	dataConvert := make(map[string]string)
+	_headerInfo := newHeaderInfo(f)
 
 	for j := 0; j < typ.Elem().NumField(); j++ {
 		field := val.Elem().Type().Field(j)
@@ -153,7 +210,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 
 			convTag := field.Tag.Get("excel-conv")
 			if convTag != "" {
-				dataConvert[hasTag] = convTag
+				_headerInfo.addHeaderConvertName(hasTag, convTag)
 			}
 		}
 	}
@@ -180,56 +237,15 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 
 			continue
 		}
-		// 将值加入结构体
-		for index, col := range columns {
-			fieldNname := _headerInfo.getHeaderFieldName(index)
-			if fieldNname == "" {
-				continue
-			}
-			field := reflect.ValueOf(ptr).Elem().FieldByName(fieldNname)
 
-			// 查看该字段是否有转换器
-			if v, ok := dataConvert[_headerInfo.getHeader(index)]; ok {
-				var convertValue any
-				if convertValue, err = f.convert[v](col); err != nil {
-					results.addError(ErrorInfo{
-						ErrorRow: row,
-						RawData:  columns,
-						Messages: []string{err.Error()},
-					})
+		// 将值映射入结构体
+		if err = _headerInfo.dataMapping(ptr, columns); err != nil {
+			results.addError(ErrorInfo{
+				ErrorRow: row,
+				RawData:  columns,
+				Messages: []string{err.Error()},
+			})
 
-					break
-				}
-
-				if !reflect.ValueOf(convertValue).IsNil() {
-					field.Set(reflect.ValueOf(convertValue))
-
-					continue
-				}
-			}
-
-			switch field.Kind() {
-			case reflect.Float32, reflect.Float64:
-				var i float64
-				if i, err = strconv.ParseFloat(col, 64); nil != err {
-					panic(i)
-				}
-				field.SetFloat(i)
-			case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
-				var i int64
-				if i, err = strconv.ParseInt(col, 10, 64); nil != err {
-					panic(i)
-				}
-				field.SetInt(i)
-			case reflect.String:
-				field.SetString(col)
-			default:
-				panic("cannot support other type besides int,float,string")
-			}
-
-		}
-
-		if len(results.errors) > 0 {
 			continue
 		}
 
@@ -239,6 +255,8 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 				RawData:  columns,
 				Messages: info,
 			})
+
+			continue
 		}
 	}
 
