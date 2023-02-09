@@ -201,9 +201,11 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 					break
 				}
 
-				field.Set(reflect.ValueOf(convertValue))
+				if !reflect.ValueOf(convertValue).IsNil() {
+					field.Set(reflect.ValueOf(convertValue))
 
-				continue
+					continue
+				}
 			}
 
 			switch field.Kind() {
