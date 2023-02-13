@@ -100,6 +100,8 @@ func (e *headerInfo) getHeaderFieldName(columnIndex int) (header string) {
 }
 
 func (e *headerInfo) dataMapping(ptr any, columns []string) (err error) {
+	ptr = reflect.New(reflect.TypeOf(ptr).Elem()).Interface()
+
 	for index, col := range columns {
 		fieldName := e.getHeaderFieldName(index)
 		if fieldName == "" {
