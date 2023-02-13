@@ -3,8 +3,8 @@ module github.com/cyclonevox/excelizex
 go 1.18
 
 require (
-	github.com/cyclonevox/validatorx v1.0.27
 	github.com/go-playground/validator/v10 v10.11.1
+	github.com/storezhang/validatorx v1.0.8
 	github.com/xuri/excelize/v2 v2.6.1
 )
 

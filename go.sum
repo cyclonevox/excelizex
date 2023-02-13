@@ -1,6 +1,4 @@
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
-github.com/cyclonevox/validatorx v1.0.27 h1:BSTa6exazuZ8Kc3xYbmhtyT5sUvY+p11gzhjYoraqt4=
-github.com/cyclonevox/validatorx v1.0.27/go.mod h1:fJ2BHEBYIezurWkA7VQZuQ78TX0rzHXS5W/+scI3KTk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -40,6 +38,8 @@ github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTE
 github.com/rogpeppe/go-internal v1.8.0/go.mod h1:WmiCO8CzOY8rg0OYDC4/i/2WRWAB6poM+XZ2dLUbcbE=
 github.com/storezhang/gox v1.4.10 h1:gXUt02yq1Mavy9MkoBf1LFbQgukSuVR0Y3TDnRulNbE=
 github.com/storezhang/gox v1.4.10/go.mod h1:1820pd46bSMD5opAz6IZ/272Z4p08aRjY5QEQ8iIdiQ=
+github.com/storezhang/validatorx v1.0.8 h1:VoVh5vew3Klhy01OmfN9J6TYedzWEl7Vo2zAbcxcYN0=
+github.com/storezhang/validatorx v1.0.8/go.mod h1:vOUqDkcOEEZkr/PtAT7RiAkam3ij+a81b7AiXjFBEiA=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
