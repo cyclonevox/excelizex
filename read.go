@@ -100,8 +100,6 @@ func (e *headerInfo) getHeaderFieldName(columnIndex int) (header string) {
 }
 
 func (e *headerInfo) dataMapping(ptr any, columns []string) (err error) {
-	ptr = reflect.New(reflect.TypeOf(ptr).Elem()).Interface()
-
 	for index, col := range columns {
 		fieldName := e.getHeaderFieldName(index)
 		if fieldName == "" {
@@ -313,5 +311,16 @@ func importData(data any, fn ImportFunc) (errInfo []string) {
 		return
 	}
 
+	cleanData(data)
+
 	return
+}
+
+func cleanData(ptr any) {
+	ptrElemValue := reflect.ValueOf(ptr).Elem()
+	num := ptrElemValue.NumField()
+
+	for i := 0; i < num; i++ {
+		ptrElemValue.Field(i).Set(reflect.New(ptrElemValue.Field(i).Type()).Elem())
+	}
 }
