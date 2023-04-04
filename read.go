@@ -6,7 +6,6 @@ import (
 	"github.com/xuri/excelize/v2"
 	"io"
 	"reflect"
-	"strconv"
 )
 
 func ReadFormFile(reader io.Reader) *File {
@@ -22,127 +21,67 @@ func ReadFormFile(reader io.Reader) *File {
 	return &f
 }
 
-type headerInfo struct {
-	// 存储header原始数据
-	headers []string
-	// k:columns index v:Header name
-	colsIndexHeaderMap map[int]string
-	// k:header v:Struct Field Name
-	headerFieldName map[string]string
-	// k:header v:convert name
-	headerMappingConverter map[string]string
-	// file converter ptr
-	convertPtr *map[string]ConvertFunc
+type ConvertFunc func(rawData string) (any, error)
+
+type ImportFunc func() error
+
+type Read struct {
+	// sheet metadata
+	metaData *metaData
+	// sheet rows iterator
+	rows *excelize.Rows
+	// I don't like err to break the method call link, so i did it
+	err error
 }
 
-func newHeaderInfo(f *File) *headerInfo {
-	return &headerInfo{
-		headers:                make([]string, 0),
-		colsIndexHeaderMap:     make(map[int]string, 0),
-		headerFieldName:        make(map[string]string),
-		headerMappingConverter: make(map[string]string),
-		convertPtr:             &f.convert,
-	}
-}
+func (f *File) Read1(ptr any) (r *Read) {
+	r = new(Read)
 
-func (e *headerInfo) addHeader(header string) {
-	e.headers = append(e.headers, header)
-}
+	var err error
+	if r.rows, err = f.excel().Rows(f.selectSheetName); err != nil {
+		r.err = err
 
-func (e *headerInfo) addHeaders(headers []string) {
-	e.headers = append(e.headers, headers...)
-}
-
-func (e *headerInfo) addHeaderFieldName(header, fieldName string) {
-	e.headerFieldName[header] = fieldName
-}
-
-func (e *headerInfo) addHeaderConvertName(header, convertName string) {
-	e.headerMappingConverter[header] = convertName
-}
-
-func (e *headerInfo) findHeadersMap(columns []string) (exist bool) {
-	if len(columns) < len(e.headers) {
 		return
 	}
 
-	for index, column := range columns {
-		for _, h := range e.headers {
-			if column == h {
-				e.colsIndexHeaderMap[index] = column
+	if err = r.newMetaData(ptr); err != nil {
+		r.err = err
 
-				continue
-			}
-		}
-	}
-
-	if len(e.colsIndexHeaderMap) == len(e.headers) {
-		exist = true
-	} else {
-		e.colsIndexHeaderMap = make(map[int]string, 0)
+		return
 	}
 
 	return
 }
 
-func (e *headerInfo) getHeader(columnIndex int) (header string) {
-	return e.colsIndexHeaderMap[columnIndex]
-}
+func (r *Read) newMetaData(ptr any) (err error) {
+	typ := reflect.TypeOf(ptr)
+	val := reflect.ValueOf(ptr)
 
-func (e *headerInfo) findConvertByHeader(header string) (convertName string, exist bool) {
-	convertName, exist = e.headerMappingConverter[header]
+	if typ.Kind() != reflect.Pointer || typ.Elem().Kind() != reflect.Struct {
+		err = errors.New("read function support struct type variable's Pointer type only")
 
-	return
-}
+		return
+	}
 
-func (e *headerInfo) getHeaderFieldName(columnIndex int) (header string) {
-	return e.headerFieldName[e.getHeader(columnIndex)]
-}
+	r.metaData = newMetaData()
 
-func (e *headerInfo) dataMapping(ptr any, columns []string) (err error) {
-	for index, col := range columns {
-		fieldName := e.getHeaderFieldName(index)
-		if fieldName == "" {
-			continue
-		}
-		field := reflect.ValueOf(ptr).Elem().FieldByName(fieldName)
+	for j := 0; j < typ.Elem().NumField(); j++ {
+		field := val.Elem().Type().Field(j)
 
-		// 查看该字段是否有转换器
-		if v, ok := e.findConvertByHeader(e.getHeader(index)); ok {
-			var convertValue any
-			if convertValue, err = (*e.convertPtr)[v](col); err != nil {
-				return
+		hasTag := field.Tag.Get("excel")
+		if hasTag != "" {
+			r.metaData.addHeader(hasTag)
+			r.metaData.addHeaderFieldName(hasTag, field.Name)
+
+			convTag := field.Tag.Get("excel-conv")
+			if convTag != "" {
+				r.metaData.addHeaderConvertName(hasTag, convTag)
 			}
-
-			field.Set(reflect.ValueOf(convertValue))
-
-			continue
-		}
-
-		switch field.Kind() {
-		case reflect.Float32, reflect.Float64:
-			var i float64
-			if i, err = strconv.ParseFloat(col, 64); nil != err {
-				panic(i)
-			}
-			field.SetFloat(i)
-		case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
-			var i int64
-			if i, err = strconv.ParseInt(col, 10, 64); nil != err {
-				panic(i)
-			}
-			field.SetInt(i)
-		case reflect.String:
-			field.SetString(col)
-		default:
-			panic("cannot support other type besides int,float,string")
 		}
 	}
 
 	return
 }
-
-type ConvertFunc func(rawData string) (any, error)
 
 // SetConvert 作为设置该excel 文件的转换器
 // ConvertFunc 作为转换器函数 rawData 是指excel tag的对应的excel原始数据。
@@ -154,31 +93,77 @@ type ConvertFunc func(rawData string) (any, error)
 //
 // 调用 f.SetConvert("nameId", func(rawData string) (any, error){ return raw[:3],nil}) 设置转换器以后
 // 使用 excel-convert:"nameId" tag的字段都会在Read函数中调用相应的函数被转换
-func (f *File) SetConvert(convertName string, convertFunc ConvertFunc) *File {
-	if f.convert == nil {
-		f.convert = make(map[string]ConvertFunc)
+func (r *Read) SetConvert(convertName string, convertFunc ConvertFunc) *Read {
+	if r.metaData.converter == nil {
+		r.metaData.converter = make(map[string]ConvertFunc)
 	}
 
-	f.convert[convertName] = convertFunc
+	r.metaData.converter[convertName] = convertFunc
 
-	return f
+	return r
 }
 
 // SetConvertMap 可传入一个 key为convertName value为转换器函数的 map
 // 以达到一次传入多个 ConvertFunc 的效果，具体使用说明可见 SetConvert 方法注释
-func (f *File) SetConvertMap(convert map[string]ConvertFunc) *File {
-	if f.convert == nil {
-		f.convert = convert
+func (r *Read) SetConvertMap(convert map[string]ConvertFunc) *Read {
+	if r.metaData.converter == nil {
+		r.metaData.converter = convert
 	} else {
 		for k, c := range convert {
-			f.convert[k] = c
+			r.metaData.converter[k] = c
 		}
 	}
 
-	return f
+	return r
 }
 
-type ImportFunc func() error
+func (r *Read) Run(fn ImportFunc) Result {
+	var (
+		row         int
+		err         error
+		headerFound bool
+	)
+
+	for r.rows.Next() {
+		row++
+		var columns []string
+		if columns, err = r.rows.Columns(); err != nil {
+			panic(err)
+		}
+
+		// 寻找表头，并将行数与关联存于map作为缓存,并将关联的表存储进
+		if !headerFound {
+			headerFound = r.metaData.findHeadersMap(columns)
+			if headerFound {
+				results.Header = r.metaData.headers
+				results.dataStartRow = row + 1
+			}
+
+			continue
+		}
+
+		// 将值映射入结构体
+		if err = _metaData.dataMapping(ptr, columns); err != nil {
+			results.addError(ErrorInfo{
+				ErrorRow: row,
+				RawData:  columns,
+				Messages: []string{err.Error()},
+			})
+
+			continue
+		}
+
+		if info := importData(ptr, fn); len(info) > 0 {
+			results.addError(ErrorInfo{
+				ErrorRow: row,
+				RawData:  columns,
+				Messages: info,
+			})
+
+			continue
+		}
+	}
+}
 
 func (f *File) Read(ptr any, fn ImportFunc) Result {
 	var (
@@ -190,30 +175,6 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		panic(err)
 	}
 	defer rows.Close()
-
-	typ := reflect.TypeOf(ptr)
-	val := reflect.ValueOf(ptr)
-
-	if typ.Kind() != reflect.Pointer || typ.Elem().Kind() != reflect.Struct {
-		panic(errors.New("read function support struct type variable's Pointer type only"))
-	}
-
-	_headerInfo := newHeaderInfo(f)
-
-	for j := 0; j < typ.Elem().NumField(); j++ {
-		field := val.Elem().Type().Field(j)
-
-		hasTag := field.Tag.Get("excel")
-		if hasTag != "" {
-			_headerInfo.addHeader(hasTag)
-			_headerInfo.addHeaderFieldName(hasTag, field.Name)
-
-			convTag := field.Tag.Get("excel-conv")
-			if convTag != "" {
-				_headerInfo.addHeaderConvertName(hasTag, convTag)
-			}
-		}
-	}
 
 	var (
 		row         int
@@ -229,9 +190,9 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 
 		// 寻找表头，并将行数与关联存于map作为缓存,并将关联的表存储进
 		if !headerFound {
-			headerFound = _headerInfo.findHeadersMap(columns)
+			headerFound = _metaData.findHeadersMap(columns)
 			if headerFound {
-				results.Header = _headerInfo.headers
+				results.Header = _metaData.headers
 				results.dataStartRow = row + 1
 			}
 
@@ -239,7 +200,7 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 		}
 
 		// 将值映射入结构体
-		if err = _headerInfo.dataMapping(ptr, columns); err != nil {
+		if err = _metaData.dataMapping(ptr, columns); err != nil {
 			results.addError(ErrorInfo{
 				ErrorRow: row,
 				RawData:  columns,
