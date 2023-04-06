@@ -3,9 +3,12 @@ package excelizex
 import (
 	"encoding/json"
 	"errors"
+	"github.com/panjf2000/ants/v2"
 	"github.com/xuri/excelize/v2"
 	"io"
 	"reflect"
+	"strconv"
+	"sync"
 )
 
 func ReadFormFile(reader io.Reader) *File {
@@ -23,18 +26,29 @@ func ReadFormFile(reader io.Reader) *File {
 
 type ConvertFunc func(rawData string) (any, error)
 
-type ImportFunc func() error
+type ImportFunc func(any any) error
 
 type Read struct {
 	// sheet metadata
 	metaData *metaData
 	// sheet rows iterator
 	rows *excelize.Rows
+	// import func for business
+	fn ImportFunc
+	//
+	results Result
 	// I don't like err to break the method call link. So I did it
 	err error
+
+	//
+	wg sync.WaitGroup
+	//goroutine pool
+	concPool *ants.Pool
+	// reuse payload struct pool
+	payloadPool *sync.Pool
 }
 
-func (f *File) Read(ptr any) (r *Read) {
+func (f *File) Read(payload any) (r *Read) {
 	r = new(Read)
 
 	var err error
@@ -44,14 +58,13 @@ func (f *File) Read(ptr any) (r *Read) {
 		return
 	}
 
-	if err = r.newMetaData(ptr); err != nil {
+	if err = r.newMetaData(payload); err != nil {
 		r.err = err
 
 		return
 	}
 
-	// todo: Try reflect.New to generate this one's ptr payload
-	r.metaData.payload = ptr
+	r.metaData.payload = payload
 
 	return
 }
@@ -120,18 +133,58 @@ func (r *Read) SetConvertMap(convert map[string]ConvertFunc) *Read {
 	return r
 }
 
-func (r *Read) Run(fn ImportFunc) Result {
-	if r.err != nil {
-		panic(r.err.Error())
+func (r *Read) initPool(num ...int) (pool *ants.Pool, payloadPool *sync.Pool, err error) {
+	// set up goroutine pool
+	if len(num) > 0 {
+		if num[0] < 1 {
+			err = errors.New("num set less than 1")
+
+			return
+		}
+
+		if pool, err = ants.NewPool(num[0]); err != nil {
+			return
+		}
+
+	} else {
+		if pool, err = ants.NewPool(1); err != nil {
+			return
+		}
 	}
+
+	// set up payloadPool
+	payloadPool = &sync.Pool{New: func() any {
+		return reflect.New(reflect.TypeOf(r.metaData.payload).Elem()).Interface()
+	}}
+
+	return
+}
+
+func (r *Read) setFunc(fn ImportFunc) {
+	r.fn = fn
+}
+
+// Run is using to set excelizex.Read concurrency And execute business func.
+// param fn is business func,fn's param is the struct object.
+// param num for set execute business functions' goroutine num.
+// attention: execute out of order temporarily.
+func (r *Read) Run(fn ImportFunc, num ...int) (results Result, err error) {
+	if r.err != nil {
+		err = r.err
+
+		return
+	}
+
+	r.setFunc(fn)
+	if r.concPool, r.payloadPool, err = r.initPool(num...); err != nil {
+		return
+	}
+	defer r.concPool.Release()
 
 	var (
 		row         int
-		err         error
 		headerFound bool
-		results     Result
 	)
-
 	for r.rows.Next() {
 		row++
 		var columns []string
@@ -150,32 +203,92 @@ func (r *Read) Run(fn ImportFunc) Result {
 			continue
 		}
 
-		// 将值映射入结构体
-		if err = r.metaData.dataMapping(r.metaData.payload, columns); err != nil {
-			results.addError(ErrorInfo{
-				ErrorRow: row,
-				RawData:  columns,
-				Messages: []string{err.Error()},
-			})
-
-			continue
-		}
-
-		if info := importData(r.metaData.payload, fn); len(info) > 0 {
-			results.addError(ErrorInfo{
-				ErrorRow: row,
-				RawData:  columns,
-				Messages: info,
-			})
-
-			continue
+		r.wg.Add(1)
+		// 向携程池提交任务
+		if err = r.concPool.Submit(func() {
+			r.exec(row, columns)
+			r.wg.Done()
+		}); err != nil {
+			return
 		}
 	}
 
-	return results
+	r.wg.Wait()
+
+	return
 }
 
-func importData(data any, fn ImportFunc) (errInfo []string) {
+func (r *Read) exec(row int, columns []string) {
+	// 将值映射入结构体
+	var (
+		err  error
+		data any
+	)
+	if data, err = r.dataMapping(columns); err != nil {
+		r.results.addError(ErrorInfo{
+			ErrorRow: row,
+			RawData:  columns,
+			Messages: []string{err.Error()},
+		})
+	}
+
+	if info := r.importData(data); len(info) > 0 {
+		r.results.addError(ErrorInfo{
+			ErrorRow: row,
+			RawData:  columns,
+			Messages: info,
+		})
+	}
+}
+
+func (r *Read) dataMapping(columns []string) (ptr any, err error) {
+	ptr = r.payloadPool.Get()
+
+	obj := reflect.ValueOf(ptr).Elem()
+
+	for index, col := range columns {
+		fieldName := r.metaData.getHeaderFieldName(index)
+		if fieldName == "" {
+			continue
+		}
+		field := obj.FieldByName(fieldName)
+
+		// 查看该字段是否有转换器
+		if v, ok := r.metaData.findConvertByHeader(r.metaData.getHeader(index)); ok {
+			var convertValue any
+			if convertValue, err = r.metaData.converter[v](col); err != nil {
+				return
+			}
+
+			field.Set(reflect.ValueOf(convertValue))
+
+			continue
+		}
+
+		switch field.Kind() {
+		case reflect.Float32, reflect.Float64:
+			var i float64
+			if i, err = strconv.ParseFloat(col, 64); nil != err {
+				panic(i)
+			}
+			field.SetFloat(i)
+		case reflect.Int64, reflect.Int32, reflect.Int8, reflect.Int16, reflect.Int:
+			var i int64
+			if i, err = strconv.ParseInt(col, 10, 64); nil != err {
+				panic(i)
+			}
+			field.SetInt(i)
+		case reflect.String:
+			field.SetString(col)
+		default:
+			panic("cannot support other type besides int,float,string")
+		}
+	}
+
+	return
+}
+
+func (r *Read) importData(data any) (errInfo []string) {
 	// 验证结构体数据是否合法
 	if err := newValidate().Validate(data); nil != err {
 		errInfo = append(errInfo, "该行有数据未正确填写")
@@ -184,7 +297,7 @@ func importData(data any, fn ImportFunc) (errInfo []string) {
 	}
 
 	// 执行导入业务
-	if err := fn(); err != nil {
+	if err := r.fn(data); err != nil {
 		valid := json.Valid([]byte(err.Error()))
 
 		if !valid {
@@ -203,16 +316,18 @@ func importData(data any, fn ImportFunc) (errInfo []string) {
 		return
 	}
 
-	cleanData(data)
+	r.cleanData(data)
 
 	return
 }
 
-func cleanData(ptr any) {
+func (r *Read) cleanData(ptr any) {
 	ptrElemValue := reflect.ValueOf(ptr).Elem()
 	num := ptrElemValue.NumField()
 
 	for i := 0; i < num; i++ {
 		ptrElemValue.Field(i).Set(reflect.New(ptrElemValue.Field(i).Type()).Elem())
 	}
+
+	r.payloadPool.Put(ptr)
 }

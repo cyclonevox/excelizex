@@ -3,6 +3,7 @@ package excelizex
 import (
 	"github.com/xuri/excelize/v2"
 	"strconv"
+	"sync"
 )
 
 type Result struct {
@@ -12,6 +13,7 @@ type Result struct {
 	Notice       string
 	Header       []string
 
+	mu     sync.Mutex
 	errors ErrorInfos
 }
 
@@ -24,11 +26,9 @@ type ErrorInfo struct {
 type ErrorInfos []ErrorInfo
 
 func (r *Result) addError(info ErrorInfo) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.errors = append(r.errors, info)
-}
-
-func (e *ErrorInfo) addErrMessage(msg string) {
-	e.Messages = append(e.Messages, msg)
 }
 
 func (f *File) removeDataLine(results Result) (err error) {
