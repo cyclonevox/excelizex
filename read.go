@@ -121,6 +121,10 @@ func (r *Read) SetConvertMap(convert map[string]ConvertFunc) *Read {
 }
 
 func (r *Read) Run(fn ImportFunc) Result {
+	if r.err != nil {
+		panic(r.err.Error())
+	}
+
 	var (
 		row         int
 		err         error
