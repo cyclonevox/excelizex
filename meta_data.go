@@ -16,6 +16,8 @@ type metaData struct {
 	headerMappingConverter map[string]string
 	// k: converter name v:converter func
 	converter map[string]ConvertFunc
+	// payload struct,the real val for run
+	payload any
 }
 
 func newMetaData() *metaData {

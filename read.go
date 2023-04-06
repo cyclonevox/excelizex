@@ -30,11 +30,11 @@ type Read struct {
 	metaData *metaData
 	// sheet rows iterator
 	rows *excelize.Rows
-	// I don't like err to break the method call link, so i did it
+	// I don't like err to break the method call link. So I did it
 	err error
 }
 
-func (f *File) Read1(ptr any) (r *Read) {
+func (f *File) Read(ptr any) (r *Read) {
 	r = new(Read)
 
 	var err error
@@ -49,6 +49,9 @@ func (f *File) Read1(ptr any) (r *Read) {
 
 		return
 	}
+
+	// todo: Try reflect.New to generate this one's ptr payload
+	r.metaData.payload = ptr
 
 	return
 }
@@ -122,6 +125,7 @@ func (r *Read) Run(fn ImportFunc) Result {
 		row         int
 		err         error
 		headerFound bool
+		results     Result
 	)
 
 	for r.rows.Next() {
@@ -143,7 +147,7 @@ func (r *Read) Run(fn ImportFunc) Result {
 		}
 
 		// 将值映射入结构体
-		if err = _metaData.dataMapping(ptr, columns); err != nil {
+		if err = r.metaData.dataMapping(r.metaData.payload, columns); err != nil {
 			results.addError(ErrorInfo{
 				ErrorRow: row,
 				RawData:  columns,
@@ -153,64 +157,7 @@ func (r *Read) Run(fn ImportFunc) Result {
 			continue
 		}
 
-		if info := importData(ptr, fn); len(info) > 0 {
-			results.addError(ErrorInfo{
-				ErrorRow: row,
-				RawData:  columns,
-				Messages: info,
-			})
-
-			continue
-		}
-	}
-}
-
-func (f *File) Read(ptr any, fn ImportFunc) Result {
-	var (
-		results Result
-		rows    *excelize.Rows
-		err     error
-	)
-	if rows, err = f.excel().Rows(f.selectSheetName); err != nil {
-		panic(err)
-	}
-	defer rows.Close()
-
-	var (
-		row         int
-		headerFound bool
-	)
-
-	for rows.Next() {
-		row++
-		var columns []string
-		if columns, err = rows.Columns(); err != nil {
-			panic(err)
-		}
-
-		// 寻找表头，并将行数与关联存于map作为缓存,并将关联的表存储进
-		if !headerFound {
-			headerFound = _metaData.findHeadersMap(columns)
-			if headerFound {
-				results.Header = _metaData.headers
-				results.dataStartRow = row + 1
-			}
-
-			continue
-		}
-
-		// 将值映射入结构体
-		if err = _metaData.dataMapping(ptr, columns); err != nil {
-			results.addError(ErrorInfo{
-				ErrorRow: row,
-				RawData:  columns,
-				Messages: []string{err.Error()},
-			})
-
-			continue
-		}
-
-		if info := importData(ptr, fn); len(info) > 0 {
+		if info := importData(r.metaData.payload, fn); len(info) > 0 {
 			results.addError(ErrorInfo{
 				ErrorRow: row,
 				RawData:  columns,
@@ -222,26 +169,6 @@ func (f *File) Read(ptr any, fn ImportFunc) Result {
 	}
 
 	return results
-}
-
-func (f *File) removeDataLine(results Result) (err error) {
-	var rows *excelize.Rows
-	if rows, err = f.excel().Rows(f.selectSheetName); err != nil {
-		return
-	}
-	defer rows.Close()
-
-	var i int
-	for rows.Next() {
-		i++
-		if i >= results.dataStartRow {
-			if err = f.excel().RemoveRow(f.selectSheetName, results.dataStartRow); err != nil {
-				return
-			}
-		}
-	}
-
-	return
 }
 
 func importData(data any, fn ImportFunc) (errInfo []string) {
