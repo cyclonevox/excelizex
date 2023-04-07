@@ -38,7 +38,7 @@ type Read struct {
 	fn ImportFunc
 	// Validate for mapping validation
 	validates []Validate
-	//
+	// results
 	results Result
 	// I don't like err to break the method call link. So I did it
 	err error
@@ -51,15 +51,22 @@ type Read struct {
 	payloadPool *sync.Pool
 }
 
-func (f *File) Read(payload any) (r *Read) {
+func (f *File) Read(payload any, sheetName ...string) (r *Read) {
 	r = new(Read)
 
-	if f.selectSheetName == "" {
-		panic("plz using File.SelectSheet")
+	if f.selectSheetName == "" && len(sheetName) == 0 {
+		panic("plz setting select sheet")
+	}
+
+	var sName string
+	if len(sheetName) > 0 {
+		sName = sheetName[0]
+	} else {
+		sName = f.selectSheetName
 	}
 
 	var err error
-	if r.rows, err = f.excel().Rows(f.selectSheetName); err != nil {
+	if r.rows, err = f.excel().Rows(sName); err != nil {
 		panic(err)
 	}
 
