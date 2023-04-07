@@ -3,6 +3,7 @@ package excelizex
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/panjf2000/ants/v2"
 	"github.com/xuri/excelize/v2"
 	"io"
@@ -35,12 +36,14 @@ type Read struct {
 	rows *excelize.Rows
 	// import func for business
 	fn ImportFunc
+	// Validate for mapping validation
+	validates []Validate
 	//
 	results Result
 	// I don't like err to break the method call link. So I did it
 	err error
 
-	//
+	// wg control to sync
 	wg sync.WaitGroup
 	//goroutine pool
 	concPool *ants.Pool
@@ -51,11 +54,13 @@ type Read struct {
 func (f *File) Read(payload any) (r *Read) {
 	r = new(Read)
 
+	if f.selectSheetName == "" {
+		panic("plz using File.SelectSheet")
+	}
+
 	var err error
 	if r.rows, err = f.excel().Rows(f.selectSheetName); err != nil {
-		r.err = err
-
-		return
+		panic(err)
 	}
 
 	if err = r.newMetaData(payload); err != nil {
@@ -128,6 +133,14 @@ func (r *Read) SetConvertMap(convert map[string]ConvertFunc) *Read {
 		for k, c := range convert {
 			r.metaData.converter[k] = c
 		}
+	}
+
+	return r
+}
+
+func (r *Read) SetValidates(validate ...Validate) *Read {
+	for _, v := range validate {
+		r.validates = append(r.validates, v)
 	}
 
 	return r
@@ -230,6 +243,8 @@ func (r *Read) exec(row int, columns []string) {
 			RawData:  columns,
 			Messages: []string{err.Error()},
 		})
+
+		return
 	}
 
 	if info := r.importData(data); len(info) > 0 {
@@ -255,9 +270,22 @@ func (r *Read) dataMapping(columns []string) (ptr any, err error) {
 
 		// 查看该字段是否有转换器
 		if v, ok := r.metaData.findConvertByHeader(r.metaData.getHeader(index)); ok {
-			var convertValue any
-			if convertValue, err = r.metaData.converter[v](col); err != nil {
-				return
+			var (
+				conv         ConvertFunc
+				convertValue any
+			)
+			if conv, ok = r.metaData.converter[v]; ok {
+				if convertValue, err = conv(col); err != nil {
+					return
+				}
+			}
+
+			if field.Type() != reflect.TypeOf(convertValue) {
+				sprintf := fmt.Sprintf(
+					"dataMapping error.convertor func return a wrong type.field type: %s;convertValue type: %s ",
+					field.Type().String(), reflect.TypeOf(convertValue),
+				)
+				panic(sprintf)
 			}
 
 			field.Set(reflect.ValueOf(convertValue))
@@ -289,11 +317,13 @@ func (r *Read) dataMapping(columns []string) (ptr any, err error) {
 }
 
 func (r *Read) importData(data any) (errInfo []string) {
-	// 验证结构体数据是否合法
-	if err := newValidate().Validate(data); nil != err {
-		errInfo = append(errInfo, "该行有数据未正确填写")
+	// 如果设置了对数据结构体的验证方式 则会验证结构体数据是否合法
+	for i := range r.validates {
+		if err := r.validates[i].Validate(data); nil != err {
+			errInfo = append(errInfo, "该行有数据未正确填写")
 
-		return
+			return
+		}
 	}
 
 	// 执行导入业务

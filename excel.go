@@ -41,7 +41,7 @@ func (f *File) Unlock(password string) (file *File, err error) {
 	return f, nil
 }
 
-func (f *File) SelectSheet(sheetName string) bool {
+func (f *File) SelectSheet(sheetName string) (exist bool) {
 	for _, n := range f.excel().GetSheetList() {
 		if n == sheetName {
 			f.selectSheetName = sheetName
