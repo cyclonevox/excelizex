@@ -2,7 +2,7 @@
 
 中文| [English](README_ENG.md)
 
-Excelizex目标就是在使用golang导入excel时，使开发者调用更加方便。就像我说的使用起来更简单。
+Excelizex目标就是在使用golang导入excel时，使开发者调用更加方便,更简单。
 
 目前该库时对qax-os/excelize 的简单封装。
 本库提供了提供了一些数据绑定，验证等功能，来更方便的支持业务编写。
