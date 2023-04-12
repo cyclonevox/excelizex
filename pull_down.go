@@ -51,8 +51,8 @@ func (p *pullDown) addOptions(col string, options any) *pullDown {
 	return p
 }
 
-func (p *pullDown) sheet(name string) *Sheet {
-	return NewSheet(Name(name + OptionsSaveTable)).SetData(p.data())
+func (p *pullDown) sheet(name string) *sheet {
+	return NewSheet(name + OptionsSaveTable).initSheet(p.data())
 }
 
 func (p *pullDown) data() [][]any {

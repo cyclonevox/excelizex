@@ -63,11 +63,11 @@ HelloWorld string `excel:"测试" json:"helloWorld"`
 ```go
 // 你可以使用 SetHeaderByStruct方法来生成
 // 例如：
-s:= excelizex.NewSheet(excelizex.SetHeaderByStruct(&testStcut{})).SetName("test")
+s:= excelizex.NewSheet(excelizex.SetHeaderByStruct(&testStcut{})).SetName("simulate_scenario_test")
 excelFile :=excelizex.New().AddSheet(s)
 
 // 或者
-excelFile := excelizex.New().AddSimpleSheet(&testStcut{}, excelizex.SetName("test"))
+excelFile := excelizex.New().AddSimpleSheet(&testStcut{}, excelizex.SetName("simulate_scenario_test"))
 
 // 如果是已经有一个创建好的slice，并且也想将他的数据写入表中
 ttt := []testStruct{
@@ -75,11 +75,11 @@ ttt := []testStruct{
 {"456", "女", "213"},
 }
 
-s := NewDataSheet(&ttt, excelizex.SetName("test"))
+s := NewDataSheet(&ttt, excelizex.SetName("simulate_scenario_test"))
 excelFile := excelizex.New().AddSheet(s)
 // 或者
 
-excelFile:= excelizex.New().AddDataSheet(&testStcut{}, excelizex.SetName("test"))
+excelFile:= excelizex.New().AddDataSheet(&testStcut{}, excelizex.SetName("simulate_scenario_test"))
 ```
 excelizex 同样支持了流式迭代器写入的方式，StreamWriteIn方法使用了qax-os/excelize中的流式迭代器，通过实现StreamWritable接口来创建表并写入。
 
@@ -136,7 +136,7 @@ var (
 	s = new(readTestStruct)
 )
 
-file.SetConvert("list", listConvert).Read("test", s, func() error {
+file.SetConvert("list", listConvert).Read("simulate_scenario_test", s, func() error {
 sList = append(sList, *s)
 
 return nil

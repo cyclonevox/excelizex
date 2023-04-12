@@ -2,64 +2,87 @@ package excelizex
 
 import (
 	"errors"
+	"fmt"
+	"github.com/cyclonevox/excelizex/extra"
+	"github.com/cyclonevox/excelizex/style"
 	"github.com/xuri/excelize/v2"
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
-type Sheet struct {
+type sheet struct {
 	// 表名
-	Name string `json:"name"`
+	name string
+	// 格式化后的数据
 	// 顶栏提示
-	Notice string `json:"notice"`
+	notice string
 	// 表头
-	Header []string `json:"header"`
+	header []string
 	// 数据
-	Data [][]any `json:"data"`
-	// 写入到第几行,主要用于标记生成excel中的表时，需要续写的位置
-	writeRow int
+	data [][]any
 	// 下拉选项 暂时只支持单列
 	pd *pullDown
+
+	// 分布和style分配语句的配置
+	// v:part -> k:style string
+	styleRef map[string][]style.Parsed
+	// 写入到第几行,主要用于标记生成excel中的表时，需要续写的位置
+	writeRow int
 }
 
-func NewSheet(options ...SheetOption) *Sheet {
-	sheet := new(Sheet)
-	for _, option := range options {
-		option(sheet)
+func NewSheet(sheetName string) *sheet {
+
+	s := &sheet{
+		name:     sheetName,
+		styleRef: make(map[string][]style.Parsed),
+		writeRow: 0,
 	}
 
-	return sheet
-}
-
-func NewDataSheet(slice any, options ...SheetOption) *Sheet {
-	return genDataSheet(slice, options...)
-}
-
-func (s *Sheet) SetName(name string) *Sheet {
-	s.Name = name
-
 	return s
 }
 
-func (s *Sheet) SetNotice(notice string) *Sheet {
-	s.Notice = notice
+func (s *sheet) Excel() *File {
+	if s.name == "" {
+		panic("need a sheet name at least")
+	}
 
-	return s
+	return New().AddSheets(s)
 }
 
-// SetHeader 为手动设置表的头部
-func (s *Sheet) SetHeader(header []string) *Sheet {
-	s.Header = header
+func (s *sheet) initSheet(a any) *sheet {
+	typ := reflect.TypeOf(a)
+	val := reflect.ValueOf(a)
+
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
+	// 如果作为Slice类型的传入对象，则还需要注意拆分后进行处理
+	switch typ.Kind() {
+	case reflect.Slice:
+		for i := 0; i < val.Len(); i++ {
+			if i == 0 {
+				s.setHeaderByStruct(val.Index(i).Interface())
+			}
+
+			s.data = append(s.data, getRowData(val.Index(i).Interface()))
+		}
+	case reflect.Struct:
+		s.setHeaderByStruct(a)
+	}
 
 	return s
 }
 
 // SetHeaderByStruct 方法会检测结构体中的excel标签，以获取结构体表头
-func (s *Sheet) SetHeaderByStruct(a any) *Sheet {
+func (s *sheet) setHeaderByStruct(a any) *sheet {
 	typ := reflect.TypeOf(a)
+	val := reflect.ValueOf(a)
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
+		val = val.Elem()
 	}
 
 	if typ.Kind() != reflect.Struct {
@@ -69,43 +92,93 @@ func (s *Sheet) SetHeaderByStruct(a any) *Sheet {
 	for i := 0; i < typ.NumField(); i++ {
 		typeField := typ.Field(i)
 
-		headerName := typeField.Tag.Get("excel")
-		if headerName == "" {
+		partTag := typeField.Tag.Get("excel")
+		if partTag == "" {
 			continue
 		} else {
-			s.Header = append(s.Header, headerName)
+
+			// 判断是excel tag 是指向哪个部分
+			params := strings.Split(partTag, "|")
+			if len(params) > 0 {
+				switch extra.Part(params[0]) {
+				case extra.NoticePart:
+					s.notice = val.Field(i).String()
+
+					// 添加提示样式映射
+					styleString := typeField.Tag.Get("style")
+					_noticeStyle := style.TagParse(styleString).Parse()
+					_noticeStyle[0].Cell.StartCell = style.Cell{Col: "A", Row: 1}
+					_noticeStyle[0].Cell.EndCell = style.Cell{Col: "A", Row: 1}
+					s.styleRef[fmt.Sprintf("%s", extra.NoticePart)] = _noticeStyle
+
+				case extra.HeaderPart:
+					s.header = append(s.header, params[1])
+					styleString := typeField.Tag.Get("style")
+					if styleString == "" {
+						continue
+					}
+
+					colName, err := excelize.ColumnNumberToName(len(s.header))
+					if err != nil {
+						panic(err)
+					}
+					headerStyle := style.TagParse(styleString).Parse()
+
+					// todo: 待优化
+					var sp []style.Parsed
+					for _, _style := range headerStyle {
+						if pp, ok := s.styleRef[fmt.Sprintf("%s", extra.HeaderPart)]; ok {
+							for _, p := range pp {
+								if reflect.DeepEqual(p.StyleNames, _style.StyleNames) {
+									p.Cell.EndCell = style.Cell{Col: colName, Row: 1}
+								}
+							}
+						} else {
+							_style.Cell.StartCell = style.Cell{Col: colName, Row: 1}
+							_style.Cell.EndCell = style.Cell{Col: colName, Row: 1}
+						}
+
+						sp = append(sp, _style)
+					}
+
+					s.styleRef[fmt.Sprintf("%s", extra.HeaderPart)] = sp
+
+					styleString = typeField.Tag.Get("data-style")
+					// todo :暂不支持 太累了抱歉
+					//dataStyle := style.TagParse(styleString).Parse(extra.DataPart)
+					//s.styleRef[fmt.Sprintf("%s-%s", extra.DataPart, params[1])] = dataStyle
+				}
+			}
+
 		}
 	}
 
 	return s
 }
 
-func (s *Sheet) SetData(data [][]any) *Sheet {
-	s.Data = data
+func getRowData(row any) (list []any) {
+	typ := reflect.TypeOf(row)
+	val := reflect.ValueOf(row)
 
-	return s
-}
+	if typ.Kind() == reflect.Struct {
+		for j := 0; j < typ.NumField(); j++ {
+			field := typ.Field(j)
 
-// SetOptions 设置下拉的选项
-func (s *Sheet) SetOptions(headOrColName string, options any) *Sheet {
-	name, err := s.findHeaderColumnName(headOrColName)
-	if err != nil {
-		panic(err)
-	}
-
-	pd := newPullDown().addOptions(name, options)
-
-	if s.pd == nil {
-		s.pd = pd
+			hasTag := field.Tag.Get("excel")
+			if hasTag != "" {
+				list = append(list, val.Field(j).Interface())
+			}
+		}
 	} else {
-		s.pd.merge(pd)
+		panic("support struct only")
 	}
 
-	return s
+	return
 }
 
-func (s *Sheet) findHeaderColumnName(headOrColName string) (columnName string, err error) {
-	for i, h := range s.Header {
+// findHeaderColumnName 寻找表头名称或者是列名称
+func (s *sheet) findHeaderColumnName(headOrColName string) (columnName string, err error) {
+	for i, h := range s.header {
 		if h == headOrColName {
 			columnName, err = excelize.ColumnNumberToName(i + 1)
 
@@ -124,17 +197,27 @@ func (s *Sheet) findHeaderColumnName(headOrColName string) (columnName string, e
 	return
 }
 
-func (s *Sheet) Excel() *File {
-	if s.Name == "" {
-		panic("need a sheet name at least")
+// SetOptions 设置下拉的选项
+func (s *sheet) SetOptions(headOrColName string, options any) *sheet {
+	name, err := s.findHeaderColumnName(headOrColName)
+	if err != nil {
+		panic(err)
 	}
 
-	return New().AddSheets(s)
+	pd := newPullDown().addOptions(name, options)
+
+	if s.pd == nil {
+		s.pd = pd
+	} else {
+		s.pd.merge(pd)
+	}
+
+	return s
 }
 
 // nextWriteRow 会获取目前该写入的行
 // 每次调用该方法表示行数增长 返回 A1 A2... 等名称
-func (s *Sheet) nextWriteRow(num ...int) string {
+func (s *sheet) nextWriteRow(num ...int) string {
 	if len(num) > 0 {
 		s.writeRow += num[0]
 	} else {
@@ -144,52 +227,12 @@ func (s *Sheet) nextWriteRow(num ...int) string {
 	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
 }
 
-func (s *Sheet) getWriteRow() string {
+func (s *sheet) getWriteRow() string {
 	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
 }
 
-func (s *Sheet) resetWriteRow() string {
+func (s *sheet) resetWriteRow() string {
 	s.writeRow = 1
 
 	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
-}
-
-type SheetOption = func(*Sheet)
-
-func Name(name string) SheetOption {
-	return func(s *Sheet) {
-		s.SetName(name)
-	}
-}
-
-func Header(header []string) SheetOption {
-	return func(s *Sheet) {
-		s.SetHeader(header)
-	}
-}
-
-// HeaderByStruct 会根据结构体的tag来生成表头
-func HeaderByStruct(a any) SheetOption {
-	return func(s *Sheet) {
-		s.SetHeaderByStruct(a)
-	}
-}
-
-func Notice(notice string) SheetOption {
-	return func(s *Sheet) {
-		s.SetNotice(notice)
-	}
-}
-
-// Data for 仅作为少量数据写入.如果需要写入大量数据 请使用StreamWriteIn() 以调用excelize的流式写入.
-func Data(data [][]any) SheetOption {
-	return func(s *Sheet) {
-		s.SetData(data)
-	}
-}
-
-func Options(headerName string, options any) SheetOption {
-	return func(s *Sheet) {
-		s.SetOptions(headerName, options)
-	}
 }

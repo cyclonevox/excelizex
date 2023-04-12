@@ -1,4 +1,4 @@
-package test
+package simulateTest
 
 import (
 	"github.com/cyclonevox/validatorx"

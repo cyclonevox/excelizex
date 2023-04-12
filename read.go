@@ -6,24 +6,10 @@ import (
 	"fmt"
 	"github.com/panjf2000/ants/v2"
 	"github.com/xuri/excelize/v2"
-	"io"
 	"reflect"
 	"strconv"
 	"sync"
 )
-
-func ReadFormFile(reader io.Reader) *File {
-	var (
-		err error
-		f   File
-	)
-
-	if f._excel, err = excelize.OpenReader(reader); err != nil {
-		panic(err)
-	}
-
-	return &f
-}
 
 type ConvertFunc func(rawData string) (any, error)
 
@@ -39,7 +25,7 @@ type Read struct {
 	// Validate for mapping validation
 	validates []Validate
 	// results
-	results Result
+	results *Result
 	// I don't like err to break the method call link. So I did it
 	err error
 
@@ -77,6 +63,7 @@ func (f *File) Read(payload any, sheetName ...string) (r *Read) {
 	}
 
 	r.metaData.payload = payload
+	r.results = new(Result)
 
 	return
 }
@@ -188,7 +175,7 @@ func (r *Read) setFunc(fn ImportFunc) {
 // param fn is business func,fn's param is the struct object.
 // param num for set execute business functions' goroutine num.
 // attention: execute out of order temporarily.
-func (r *Read) Run(fn ImportFunc, num ...int) (results Result, err error) {
+func (r *Read) Run(fn ImportFunc, num ...int) (results *Result, err error) {
 	if r.err != nil {
 		err = r.err
 
@@ -216,8 +203,8 @@ func (r *Read) Run(fn ImportFunc, num ...int) (results Result, err error) {
 		if !headerFound {
 			headerFound = r.metaData.findHeadersMap(columns)
 			if headerFound {
-				results.Header = r.metaData.headers
-				results.dataStartRow = row + 1
+				r.results.Header = r.metaData.headers
+				r.results.dataStartRow = row + 1
 			}
 
 			continue
@@ -234,6 +221,8 @@ func (r *Read) Run(fn ImportFunc, num ...int) (results Result, err error) {
 	}
 
 	r.wg.Wait()
+
+	results = r.results
 
 	return
 }
