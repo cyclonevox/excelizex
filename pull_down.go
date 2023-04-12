@@ -52,7 +52,12 @@ func (p *pullDown) addOptions(col string, options any) *pullDown {
 }
 
 func (p *pullDown) sheet(name string) *sheet {
-	return NewSheet(name + OptionsSaveTable).initSheet(p.data())
+	s := NewSheet(name+OptionsSaveTable, nil)
+	for _, p := range p.data() {
+		s.data = append(s.data, getRowData(reflect.ValueOf(p).Interface()))
+	}
+
+	return s
 }
 
 func (p *pullDown) data() [][]any {

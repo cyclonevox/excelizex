@@ -32,12 +32,18 @@ type sheet struct {
 	writeRow int
 }
 
-func NewSheet(sheetName string) *sheet {
+func NewSheet(sheetName string, a any) *sheet {
+	if sheetName == "" {
+		panic("sheet cannot be empty")
+	}
 
 	s := &sheet{
 		name:     sheetName,
 		styleRef: make(map[string][]style.Parsed),
 		writeRow: 0,
+	}
+	if a != nil {
+		s.initSheetData(a)
 	}
 
 	return s
@@ -51,7 +57,7 @@ func (s *sheet) Excel() *File {
 	return New().AddSheets(s)
 }
 
-func (s *sheet) initSheet(a any) *sheet {
+func (s *sheet) initSheetData(a any) {
 	typ := reflect.TypeOf(a)
 	val := reflect.ValueOf(a)
 
@@ -73,7 +79,7 @@ func (s *sheet) initSheet(a any) *sheet {
 		s.setHeaderByStruct(a)
 	}
 
-	return s
+	return
 }
 
 // SetHeaderByStruct 方法会检测结构体中的excel标签，以获取结构体表头
@@ -106,6 +112,9 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 
 					// 添加提示样式映射
 					styleString := typeField.Tag.Get("style")
+					if styleString == "" {
+						continue
+					}
 					_noticeStyle := style.TagParse(styleString).Parse()
 					_noticeStyle[0].Cell.StartCell = style.Cell{Col: "A", Row: 1}
 					_noticeStyle[0].Cell.EndCell = style.Cell{Col: "A", Row: 1}
@@ -159,6 +168,11 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 func getRowData(row any) (list []any) {
 	typ := reflect.TypeOf(row)
 	val := reflect.ValueOf(row)
+
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		val = val.Elem()
+	}
 
 	if typ.Kind() == reflect.Struct {
 		for j := 0; j < typ.NumField(); j++ {

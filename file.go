@@ -83,7 +83,7 @@ func (f *File) genNewStyle(styleNames []string) (styleID int) {
 		for _, name := range styleNames {
 			_newStyle, ok := f.styleCache[name]
 			if ok {
-				_style.Append(_newStyle)
+				_style.Append(_newStyle.Style)
 			}
 		}
 
@@ -94,7 +94,7 @@ func (f *File) genNewStyle(styleNames []string) (styleID int) {
 
 		f.styleCache[_style.Name()] = &style.Payload{
 			StyleID: styleId,
-			Style:   _style,
+			Style:   _style.Style,
 		}
 	}
 
