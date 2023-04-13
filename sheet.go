@@ -116,11 +116,12 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 						continue
 					}
 					_noticeStyle := style.TagParse(styleString).Parse()
-					_noticeStyle[0].Cell.StartCell = style.Cell{Col: "A", Row: 1}
-					_noticeStyle[0].Cell.EndCell = style.Cell{Col: "A", Row: 1}
-					s.styleRef[fmt.Sprintf("%s", extra.NoticePart)] = _noticeStyle
+					_noticeStyle.Cell.StartCell = style.Cell{Col: "A", Row: 1}
+					_noticeStyle.Cell.EndCell = style.Cell{Col: "A", Row: 1}
+					s.styleRef[fmt.Sprintf("%s", extra.NoticePart)] = []style.Parsed{_noticeStyle}
 
 				case extra.HeaderPart:
+					// todo： 现在header的style暂时不能交叉设置，原因是会被覆盖，需要在后续改动
 					s.header = append(s.header, params[1])
 					styleString := typeField.Tag.Get("style")
 					if styleString == "" {
@@ -135,19 +136,28 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 
 					// todo: 待优化
 					var sp []style.Parsed
-					for _, _style := range headerStyle {
-						if pp, ok := s.styleRef[fmt.Sprintf("%s", extra.HeaderPart)]; ok {
-							for _, p := range pp {
-								if reflect.DeepEqual(p.StyleNames, _style.StyleNames) {
-									p.Cell.EndCell = style.Cell{Col: colName, Row: 1}
-								}
+
+					var okk bool
+					if pp, ok := s.styleRef[fmt.Sprintf("%s", extra.HeaderPart)]; ok {
+						for _, p := range pp {
+							if reflect.DeepEqual(p.StyleNames, headerStyle.StyleNames) {
+								p.Cell.EndCell = style.Cell{Col: colName, Row: 2}
+								okk = true
 							}
-						} else {
-							_style.Cell.StartCell = style.Cell{Col: colName, Row: 1}
-							_style.Cell.EndCell = style.Cell{Col: colName, Row: 1}
+							sp = append(sp, p)
 						}
 
-						sp = append(sp, _style)
+						if !okk {
+							headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
+							headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
+
+							sp = append(sp, headerStyle)
+						}
+					} else {
+						headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
+						headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
+
+						sp = append(sp, headerStyle)
 					}
 
 					s.styleRef[fmt.Sprintf("%s", extra.HeaderPart)] = sp
@@ -179,7 +189,7 @@ func getRowData(row any) (list []any) {
 			field := typ.Field(j)
 
 			hasTag := field.Tag.Get("excel")
-			if hasTag != "" {
+			if hasTag != "" && hasTag != "notice" {
 				list = append(list, val.Field(j).Interface())
 			}
 		}

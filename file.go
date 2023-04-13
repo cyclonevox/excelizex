@@ -36,7 +36,7 @@ func New(reader ...io.Reader) *File {
 		}
 	}
 
-	if f._excel == nil {
+	if f == nil {
 		f = &File{_excel: excelize.NewFile()}
 		if f.styleCache == nil {
 			f.styleCache = make(map[string]*style.Payload)
@@ -223,8 +223,10 @@ func (f *File) setPullDown(s *sheet) (err error) {
 }
 
 func (f *File) writeDefaultFormatSheet(s *sheet) (err error) {
-	// 遗憾的是我必须先将numFmt style给每一列设置好
-	// todo：需要支持数据style支持
+	// 遗憾的是我必须先将numFmt 和 未锁定 style给每一列设置好
+	if err = f.settingAllCol(s); err != nil {
+		return
+	}
 
 	if err = f.writeNotice(s); err != nil {
 		return
@@ -240,6 +242,21 @@ func (f *File) writeDefaultFormatSheet(s *sheet) (err error) {
 
 	if err = f.writeData(s); err != nil {
 		return
+	}
+
+	return
+}
+
+func (f *File) settingAllCol(s *sheet) (err error) {
+	var colName string
+	// 设置表各列数据格式 数字默认为“文本,未锁定”
+	for i := range s.header {
+		if colName, err = excelize.ColumnNumberToName(1 + i); nil != err {
+			return
+		}
+		if err = f.excel().SetColStyle(s.name, colName, f.styleCache["default-all"].StyleID); nil != err {
+			return
+		}
 	}
 
 	return
@@ -262,10 +279,6 @@ func (f *File) writeNotice(s *sheet) (err error) {
 }
 
 func (f *File) writeHeader(s *sheet) (err error) {
-	if err = f.headerAdaptionWidth(s); err != nil {
-		return
-	}
-
 	row := s.nextWriteRow()
 	if err = f.excel().SetSheetRow(s.name, row, &s.header); err != nil {
 		return
@@ -305,7 +318,7 @@ func (f *File) setPartStyle(s *sheet, part extra.Part) (err error) {
 			if err = f.excel().SetCellStyle(
 				s.name,
 				_s.Cell.StartCell.Format(),
-				_s.Cell.StartCell.Format(),
+				_s.Cell.EndCell.Format(),
 				styleId,
 			); nil != err {
 				return
@@ -322,9 +335,7 @@ func (f *File) headerAdaptionWidth(s *sheet) (err error) {
 		if colName, err = excelize.ColumnNumberToName(1 + i); nil != err {
 			return
 		}
-		if err = f.excel().SetColStyle(s.name, colName, f.styleCache["default-all"].StyleID); nil != err {
-			return
-		}
+
 		if err = f.excel().SetColWidth(s.name, colName, colName, float64(9*utf8.RuneCount([]byte(s.header[i]))/4+1)); err != nil {
 			return
 		}

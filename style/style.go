@@ -20,28 +20,34 @@ type DefaultStyle struct {
 	style *styleMap
 }
 
-func (d *DefaultStyle) Append(style Style) Style {
-	d.style.saveToMap(style.Style())
-	d.name += "+" + style.Name()
+func (d DefaultStyle) Append(style Style) Style {
+	ds := &DefaultStyle{
+		name:  d.name + "+" + style.Name(),
+		style: newStyleMap(),
+	}
 
-	return d
+	ds.style.saveToMap(d.Style())
+	ds.style.saveToMap(style.Style())
+	ds.name += "+" + style.Name()
+
+	return ds
 }
 
-func (d *DefaultStyle) Name() string {
+func (d DefaultStyle) Name() string {
 	return d.name
 }
 
-func (d *DefaultStyle) Style() *excelize.Style {
+func (d DefaultStyle) Style() *excelize.Style {
 	return d.style.mapToStyle()
 }
 
-func (d *DefaultStyle) SetName(name string) Style {
+func (d DefaultStyle) SetName(name string) Style {
 	d.name = name
 
 	return d
 }
 
-func (d *DefaultStyle) initStyle(style *excelize.Style) {
+func (d DefaultStyle) initStyle(style *excelize.Style) {
 	d.style.saveToMap(style)
 }
 
@@ -59,14 +65,16 @@ func NewDefaultStyle(name string, style *excelize.Style) *DefaultStyle {
 var DefaultNoticeStyle = DefaultRedFont.Append(AlignmentWrapText).Append(DefaultLocked).SetName("default-notice")
 var DefaultHeaderRedStyle = DefaultRedFont.Append(DefaultLocked).SetName("default-header-red")
 var DefaultHeaderStyle = DefaultLocked.SetName("default-header")
-var DefaultDataStyle = DefaultNumFmtText.SetName("default-all")
+var DefaultDataStyle = DefaultNumFmtText.Append(DefaultNoLocked).SetName("default-all")
 
 var DefaultRedFont = NewDefaultStyle("red-font", redFont)
 var AlignmentWrapText = NewDefaultStyle("alignment", &excelize.Style{Alignment: &excelize.Alignment{WrapText: true}})
 var DefaultNumFmtText = NewDefaultStyle("numFmtText", numFmtText)
 var DefaultLocked = NewDefaultStyle("default-locked", locked)
+var DefaultNoLocked = NewDefaultStyle("default-no-locked", noLocked)
 
 var locked = &excelize.Style{Protection: &excelize.Protection{Locked: true}}
+var noLocked = &excelize.Style{Protection: &excelize.Protection{Locked: false}}
 var numFmtText = &excelize.Style{NumFmt: 49}
 var redFont = &excelize.Style{
 	Font: &excelize.Font{
