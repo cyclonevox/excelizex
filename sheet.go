@@ -184,7 +184,8 @@ func getRowData(row any) (list []any) {
 		val = val.Elem()
 	}
 
-	if typ.Kind() == reflect.Struct {
+	switch typ.Kind() {
+	case reflect.Struct:
 		for j := 0; j < typ.NumField(); j++ {
 			field := typ.Field(j)
 
@@ -193,7 +194,12 @@ func getRowData(row any) (list []any) {
 				list = append(list, val.Field(j).Interface())
 			}
 		}
-	} else {
+	case reflect.Slice:
+		for i := 0; i < val.Len(); i++ {
+			list = append(list, val.Index(i).Interface())
+		}
+
+	default:
 		panic("support struct only")
 	}
 

@@ -101,15 +101,32 @@ func (f *File) genNewStyle(styleNames []string) (styleID int) {
 	return styleID
 }
 
-func (f *File) AddSheet(name string, model any) *File {
+type SetOptions struct {
+	HeadOrColName string
+	Options       any
+}
+
+func NewOptions(headOrColName string, options any) SetOptions {
+	return SetOptions{
+		HeadOrColName: headOrColName,
+		Options:       options,
+	}
+}
+
+func (f *File) AddSheet(name string, model any, options ...SetOptions) *File {
 	var err error
 
 	s := NewSheet(name, model)
+	for _, op := range options {
+		s.SetOptions(op.HeadOrColName, op.Options)
+	}
 	f.addSheet(s)
 
 	if err = f.writeDefaultFormatSheet(s); err != nil {
 		panic(err)
 	}
+
+	f.selectSheetName = name
 
 	return f
 }
@@ -146,16 +163,6 @@ func (f *File) Unlock(password string) (file *File, err error) {
 	}
 
 	return f, nil
-}
-
-func (f *File) SelectSheet(sheetName string) *File {
-	if _, ok := f.sheets[sheetName]; ok {
-		f.selectSheetName = sheetName
-	} else {
-		panic(fmt.Sprintf("sheetName: %s does not exist !", sheetName))
-	}
-
-	return f
 }
 
 func (f *File) excel() *excelize.File {
@@ -349,8 +356,15 @@ func (f *File) headerAdaptionWidth(s *sheet) (err error) {
 			return
 		}
 
-		if err = f.excel().SetColWidth(s.name, colName, colName, float64(9*utf8.RuneCount([]byte(s.header[i]))/4+1)); err != nil {
+		var width float64
+		if width, err = f.excel().GetColWidth(s.name, colName); err != nil {
 			return
+		}
+
+		if width <= float64(9*utf8.RuneCount([]byte(s.header[i]))/4+1) {
+			if err = f.excel().SetColWidth(s.name, colName, colName, float64(9*utf8.RuneCount([]byte(s.header[i]))/4+1)); err != nil {
+				return
+			}
 		}
 	}
 
@@ -414,12 +428,4 @@ func (f *File) writeData(s *sheet) (err error) {
 	}
 
 	return
-}
-
-func (f *File) ExistSheet(sheetName string) (exist bool) {
-	if _, ok := f.sheets[sheetName]; ok {
-		return ok
-	} else {
-		return false
-	}
 }

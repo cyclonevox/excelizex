@@ -7,7 +7,7 @@ import (
 
 func TestGenerateFile(t *testing.T) {
 	t.Run("no_data_no_style", func(t *testing.T) {
-		err := New().AddSheets(NewSheet("helloWorld", new(TestNoStyle))).SaveAs("./test/no_data_no_style.xlsx")
+		err := New().AddSheet("helloWorld", new(TestNoStyle)).SaveAs("./test/no_data_no_style.xlsx")
 		if err != nil {
 			t.Errorf("has_data_no_style: %s", err)
 		}
@@ -16,7 +16,7 @@ func TestGenerateFile(t *testing.T) {
 	t.Run("no_data_has_style", func(t *testing.T) {
 		ttt := new(TestHasStyle)
 		ttt.Notice = "你好世界你好世界你好世界你好世界你好世界你好世界你好世界"
-		err := New().AddSheets(NewSheet("helloWorld", ttt)).SaveAs("./test/no_data_has_style.xlsx")
+		err := New().AddSheet("helloWorld", ttt).SaveAs("./test/no_data_has_style.xlsx")
 		if err != nil {
 			t.Errorf("has_data_has_style: %s", err)
 		}
@@ -35,7 +35,7 @@ func TestGenerateFile(t *testing.T) {
 			)
 		}
 
-		err := New().AddSheets(NewSheet("helloWorld", hasdata)).SaveAs("./test/has_data_no_style.xlsx")
+		err := New().AddSheet("helloWorld", hasdata).SaveAs("./test/has_data_no_style.xlsx")
 		if err != nil {
 			t.Errorf("has_data_no_style: %s", err)
 		}
@@ -55,7 +55,7 @@ func TestGenerateFile(t *testing.T) {
 			)
 		}
 
-		err := New().AddSheets(NewSheet("helloWorld", hasdata)).SaveAs("./test/has_data_has_style.xlsx", "1")
+		err := New().AddSheet("helloWorld", hasdata).SaveAs("./test/has_data_has_style.xlsx", "1")
 		if err != nil {
 			t.Errorf("has_data_has_style: %s", err)
 		}
