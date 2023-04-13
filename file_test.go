@@ -13,6 +13,15 @@ func TestGenerateFile(t *testing.T) {
 		}
 	})
 
+	t.Run("no_data_has_style", func(t *testing.T) {
+		ttt := new(TestHasStyle)
+		ttt.Notice = "你好世界你好世界你好世界你好世界你好世界你好世界你好世界"
+		err := New().AddSheets(NewSheet("helloWorld", ttt)).SaveAs("./test/no_data_has_style.xlsx")
+		if err != nil {
+			t.Errorf("has_data_has_style: %s", err)
+		}
+	})
+
 	t.Run("has_data_no_style", func(t *testing.T) {
 		var hasdata []*TestNoStyle
 		for i := 0; i < 100; i++ {
@@ -41,6 +50,7 @@ func TestGenerateFile(t *testing.T) {
 					Notice: "你好世界你好世界你好世界你好世界你好世界你好世界你好世界你好世界你好世界",
 					Name:   "hello" + strconv.FormatInt(int64(i), 10),
 					Phone:  i,
+					Id:     i,
 				},
 			)
 		}
