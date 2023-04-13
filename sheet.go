@@ -54,7 +54,7 @@ func (s *sheet) Excel() *File {
 		panic("need a sheet name at least")
 	}
 
-	return New().AddSheets(s)
+	return New().AddFormattedSheets(s)
 }
 
 func (s *sheet) initSheetData(a any) {
