@@ -101,7 +101,18 @@ func (f *File) genNewStyle(styleNames []string) (styleID int) {
 	return styleID
 }
 
-func (f *File) AddSheets(sheets ...*sheet) *File {
+func (f *File) AddSheet(name string, model any) {
+	var err error
+
+	s := NewSheet(name, model)
+	f.addSheet(s)
+
+	if err = f.writeDefaultFormatSheet(s); err != nil {
+		panic(err)
+	}
+}
+
+func (f *File) AddFormattedSheets(sheets ...*sheet) *File {
 	var err error
 
 	for _, s := range sheets {
