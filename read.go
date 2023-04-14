@@ -237,20 +237,16 @@ func (r *Read) exec(row int, columns []string) {
 			ErrorRow: row,
 			RawData:  columns,
 			Messages: []string{err.Error()},
-			err:      []error{err},
 		})
 
 		return
 	}
 
-	if info, e := r.importData(data); len(info) > 0 {
-		fmt.Println(info)
-		fmt.Println(e[0].Error())
+	if info := r.importData(data); len(info) > 0 {
 		r.results.addError(ErrorInfo{
 			ErrorRow: row,
 			RawData:  columns,
 			Messages: info,
-			err:      e,
 		})
 	}
 }
@@ -315,7 +311,7 @@ func (r *Read) dataMapping(columns []string) (ptr any, err error) {
 	return
 }
 
-func (r *Read) importData(data any) (errInfo []string, errors []error) {
+func (r *Read) importData(data any) (errInfo []string) {
 	// 如果设置了对数据结构体的验证方式 则会验证结构体数据是否合法
 	for i := range r.validates {
 		if err := r.validates[i].Validate(data); err != nil {

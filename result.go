@@ -21,7 +21,6 @@ type ErrorInfo struct {
 	ErrorRow int
 	RawData  []string
 	Messages []string
-	err      []error
 }
 
 type ErrorInfos []ErrorInfo
