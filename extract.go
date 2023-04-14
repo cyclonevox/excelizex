@@ -53,6 +53,7 @@ func ExtractFromUrl(FileURL string, password ...string) (excel *File, err error)
 	if resp, err = http.Get(FileURL); err != nil {
 		return
 	}
+
 	if excel, err = newExcelFormIo(resp.Body); err != nil {
 		return
 	}

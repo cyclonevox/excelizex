@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cyclonevox/excelizex/extra"
 	"github.com/panjf2000/ants/v2"
 	"github.com/xuri/excelize/v2"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -37,22 +39,15 @@ type Read struct {
 	payloadPool *sync.Pool
 }
 
-func (f *File) Read(payload any, sheetName ...string) (r *Read) {
+func (f *File) Read(payload any, sheetName string) (r *Read) {
 	r = new(Read)
 
 	if f.selectSheetName == "" && len(sheetName) == 0 {
 		panic("plz setting select sheet")
 	}
 
-	var sName string
-	if len(sheetName) > 0 {
-		sName = sheetName[0]
-	} else {
-		sName = f.selectSheetName
-	}
-
 	var err error
-	if r.rows, err = f.excel().Rows(sName); err != nil {
+	if r.rows, err = f.excel().Rows(sheetName); err != nil {
 		panic(err)
 	}
 
@@ -64,6 +59,7 @@ func (f *File) Read(payload any, sheetName ...string) (r *Read) {
 
 	r.metaData.payload = payload
 	r.results = new(Result)
+	r.results.SheetName = sheetName
 
 	return
 }
@@ -85,12 +81,15 @@ func (r *Read) newMetaData(ptr any) (err error) {
 
 		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
-			r.metaData.addHeader(hasTag)
-			r.metaData.addHeaderFieldName(hasTag, field.Name)
+			split := strings.Split(hasTag, "|")
+			if split[0] == string(extra.HeaderPart) {
+				r.metaData.addHeader(split[1])
+				r.metaData.addHeaderFieldName(split[1], field.Name)
 
-			convTag := field.Tag.Get("excel-conv")
-			if convTag != "" {
-				r.metaData.addHeaderConvertName(hasTag, convTag)
+				convTag := field.Tag.Get("excel-conv")
+				if convTag != "" {
+					r.metaData.addHeaderConvertName(split[1], convTag)
+				}
 			}
 		}
 	}
@@ -238,16 +237,20 @@ func (r *Read) exec(row int, columns []string) {
 			ErrorRow: row,
 			RawData:  columns,
 			Messages: []string{err.Error()},
+			err:      []error{err},
 		})
 
 		return
 	}
 
-	if info := r.importData(data); len(info) > 0 {
+	if info, e := r.importData(data); len(info) > 0 {
+		fmt.Println(info)
+		fmt.Println(e[0].Error())
 		r.results.addError(ErrorInfo{
 			ErrorRow: row,
 			RawData:  columns,
 			Messages: info,
+			err:      e,
 		})
 	}
 }
@@ -312,10 +315,10 @@ func (r *Read) dataMapping(columns []string) (ptr any, err error) {
 	return
 }
 
-func (r *Read) importData(data any) (errInfo []string) {
+func (r *Read) importData(data any) (errInfo []string, errors []error) {
 	// 如果设置了对数据结构体的验证方式 则会验证结构体数据是否合法
 	for i := range r.validates {
-		if err := r.validates[i].Validate(data); nil != err {
+		if err := r.validates[i].Validate(data); err != nil {
 			errInfo = append(errInfo, "该行有数据未正确填写")
 
 			return

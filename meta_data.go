@@ -6,6 +6,8 @@ import (
 )
 
 type metaData struct {
+	// 表名
+	sheetName string
 	// 存储header原始数据
 	headers []string
 	// k:columns index v:Header name

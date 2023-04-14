@@ -21,6 +21,7 @@ type ErrorInfo struct {
 	ErrorRow int
 	RawData  []string
 	Messages []string
+	err      []error
 }
 
 type ErrorInfos []ErrorInfo
@@ -31,9 +32,9 @@ func (r *Result) addError(info ErrorInfo) {
 	r.errors = append(r.errors, info)
 }
 
-func (f *File) removeDataLine(results Result) (err error) {
+func (f *File) removeDataLine(results *Result) (err error) {
 	var rows *excelize.Rows
-	if rows, err = f.excel().Rows(f.selectSheetName); err != nil {
+	if rows, err = f.excel().Rows(results.SheetName); err != nil {
 		return
 	}
 	defer rows.Close()
@@ -42,7 +43,7 @@ func (f *File) removeDataLine(results Result) (err error) {
 	for rows.Next() {
 		i++
 		if i >= results.dataStartRow {
-			if err = f.excel().RemoveRow(f.selectSheetName, results.dataStartRow); err != nil {
+			if err = f.excel().RemoveRow(results.SheetName, results.dataStartRow); err != nil {
 				return
 			}
 		}
@@ -60,7 +61,7 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 	}
 
 	// 移除所有行
-	if err = f.removeDataLine(*result); err != nil {
+	if err = f.removeDataLine(result); err != nil {
 		return
 	}
 
@@ -68,7 +69,7 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 	if result.Header[len(result.Header)-1] != "错误原因" {
 		result.Header = append(result.Header, "错误原因")
 		rowName := "A" + strconv.FormatInt(int64(result.dataStartRow-1), 10)
-		if err = f.excel().SetSheetRow(f.selectSheetName, rowName, &result.Header); err != nil {
+		if err = f.excel().SetSheetRow(result.SheetName, rowName, &result.Header); err != nil {
 			return
 		}
 	}
@@ -87,12 +88,12 @@ func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
 		}
 
 		cellName := "A" + strconv.FormatInt(int64(result.dataStartRow+index), 10)
-		if err = f.excel().SetSheetRow(f.selectSheetName, cellName, &errorInfo.RawData); err != nil {
+		if err = f.excel().SetSheetRow(result.SheetName, cellName, &errorInfo.RawData); err != nil {
 			return
 		}
 
 		errorInfoCellName := errorInfoColumnName + strconv.FormatInt(int64(result.dataStartRow+index), 10)
-		if err = f.excel().SetSheetRow(f.selectSheetName, errorInfoCellName, &errorInfo.Messages); err != nil {
+		if err = f.excel().SetSheetRow(result.SheetName, errorInfoCellName, &errorInfo.Messages); err != nil {
 			return
 		}
 	}
