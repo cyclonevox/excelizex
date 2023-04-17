@@ -17,7 +17,7 @@ func Test_Batch_Read(t *testing.T) {
 		panic(err)
 	}
 	excel := excelizex.New(f)
-	r := excel.Read(new(batchData), "NewSheet").SetValidates(newValidation()).
+	r := excel.Read(new(batchData), "Sheet1").SetValidates(newValidation()).
 		SetConvert("id-string", func(rawData string) (any, error) {
 			for strings.HasPrefix(rawData, "0") {
 				rawData = strings.TrimPrefix(rawData, "0")

@@ -24,6 +24,6 @@ func (v *validation) Validate(i interface{}) error {
 }
 
 type batchData struct {
-	Id    string `excel:"userId" excel-conv:"id-string"`
-	Phone string `excel:"phoneNumber"`
+	Id    string `excel:"header|userId" excel-conv:"id-string"`
+	Phone string `excel:"header|phoneNumber"`
 }
