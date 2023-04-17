@@ -227,13 +227,18 @@ func (f *File) setPullDown(s *sheet) (err error) {
 
 	for index, p := range s.pd.options {
 		dvRange := excelize.NewDataValidation(true)
-		dvRange.Sqref = p.col + strconv.FormatInt(int64(s.writeRow+1), 10) + ":" + p.col + "3000"
+		dvRange.Sqref = p.col + strconv.FormatInt(int64(s.writeRow+1), 10) + ":" + p.col + "1048576"
 
 		var endColunmName string
 		endColunmName, err = excelize.ColumnNumberToName(len(p.data))
 		ss := fmt.Sprintf("%s!$A$%d:$%s$%d", dataSheet.name, index+1, endColunmName, index+1)
 
 		dvRange.SetSqrefDropList(ss)
+		dvRange.ShowInputMessage = true
+		dvRange.ShowErrorMessage = true
+		sss := "请按下拉框中的文本进行正确填写"
+		dvRange.Error = &sss
+
 		if err = f.excel().AddDataValidation(s.name, dvRange); err != nil {
 			return
 		}
