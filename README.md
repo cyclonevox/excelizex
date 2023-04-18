@@ -1,7 +1,5 @@
 ## Excelizex 只是一个简单的excel库
 
-## This project has not done
-
 中文| [English](README_ENG.md)
 
 Excelizex目标就是在使用golang导入excel时，使开发者调用更加方便,更简单。
