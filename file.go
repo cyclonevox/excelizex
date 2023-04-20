@@ -3,13 +3,13 @@ package excelizex
 import (
 	"bytes"
 	"fmt"
-	"github.com/cyclonevox/excelizex/extra"
-	"github.com/cyclonevox/excelizex/style"
-	"github.com/xuri/excelize/v2"
 	"io"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/cyclonevox/excelizex/style"
+	"github.com/xuri/excelize/v2"
 )
 
 const OptionsSaveTable = "选项数据表"
@@ -295,7 +295,7 @@ func (f *File) writeNotice(s *sheet) (err error) {
 		if err = f.excel().SetCellValue(s.name, row, s.notice); err != nil {
 			return
 		}
-		if err = f.setPartStyle(s, extra.NoticePart); err != nil {
+		if err = f.setPartStyle(s, noticePart); err != nil {
 			return
 		}
 	}
@@ -308,22 +308,22 @@ func (f *File) writeHeader(s *sheet) (err error) {
 	if err = f.excel().SetSheetRow(s.name, row, &s.header); err != nil {
 		return
 	}
-	if err = f.setPartStyle(s, extra.HeaderPart); err != nil {
+	if err = f.setPartStyle(s, headerPart); err != nil {
 		return
 	}
 
 	return
 }
 
-func (f *File) setPartStyle(s *sheet, part extra.Part) (err error) {
+func (f *File) setPartStyle(s *sheet, part Part) (err error) {
 	if _style, ok := s.styleRef[string(part)]; ok {
 		if _style[0].AutoWide {
 			switch part {
-			case extra.NoticePart:
+			case noticePart:
 				if err = f.noticeAdaptionWidth(s); err != nil {
 					return
 				}
-			case extra.HeaderPart:
+			case headerPart:
 				if err = f.headerAdaptionWidth(s); err != nil {
 					return
 				}

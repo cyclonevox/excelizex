@@ -1,8 +1,9 @@
 package style
 
 import (
-	"github.com/xuri/excelize/v2"
 	"testing"
+
+	"github.com/xuri/excelize/v2"
 )
 
 func Test_Create_Style_Map(t *testing.T) {

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cyclonevox/excelizex/extra"
-	"github.com/panjf2000/ants/v2"
-	"github.com/xuri/excelize/v2"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/panjf2000/ants/v2"
+	"github.com/xuri/excelize/v2"
 )
 
 type ConvertFunc func(rawData string) (any, error)
@@ -82,7 +82,7 @@ func (r *Read) newMetaData(ptr any) (err error) {
 		hasTag := field.Tag.Get("excel")
 		if hasTag != "" {
 			split := strings.Split(hasTag, "|")
-			if split[0] == string(extra.HeaderPart) {
+			if split[0] == string(headerPart) {
 				r.metaData.addHeader(split[1])
 				r.metaData.addHeaderFieldName(split[1], field.Name)
 

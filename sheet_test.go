@@ -66,6 +66,5 @@ func TestGenerateSheet(t *testing.T) {
 
 		newSheet := NewSheet("helloWorld", hasdata)
 		fmt.Println(newSheet)
-		fmt.Println(fmt.Sprintf("%+v", newSheet.styleRef))
 	})
 }

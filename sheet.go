@@ -3,13 +3,13 @@ package excelizex
 import (
 	"errors"
 	"fmt"
-	"github.com/cyclonevox/excelizex/extra"
-	"github.com/cyclonevox/excelizex/style"
-	"github.com/xuri/excelize/v2"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/cyclonevox/excelizex/style"
+	"github.com/xuri/excelize/v2"
 )
 
 type sheet struct {
@@ -106,8 +106,8 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 			// 判断是excel tag 是指向哪个部分
 			params := strings.Split(partTag, "|")
 			if len(params) > 0 {
-				switch extra.Part(params[0]) {
-				case extra.NoticePart:
+				switch Part(params[0]) {
+				case noticePart:
 					s.notice = val.Field(i).String()
 
 					// 添加提示样式映射
@@ -118,9 +118,9 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 					_noticeStyle := style.TagParse(styleString).Parse()
 					_noticeStyle.Cell.StartCell = style.Cell{Col: "A", Row: 1}
 					_noticeStyle.Cell.EndCell = style.Cell{Col: "A", Row: 1}
-					s.styleRef[fmt.Sprintf("%s", extra.NoticePart)] = []style.Parsed{_noticeStyle}
+					s.styleRef[fmt.Sprintf("%s", noticePart)] = []style.Parsed{_noticeStyle}
 
-				case extra.HeaderPart:
+				case headerPart:
 					// todo： 现在header的style暂时不能交叉设置，原因是会被覆盖，需要在后续改动
 					s.header = append(s.header, params[1])
 					styleString := typeField.Tag.Get("style")
@@ -138,7 +138,7 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 					var sp []style.Parsed
 
 					var okk bool
-					if pp, ok := s.styleRef[fmt.Sprintf("%s", extra.HeaderPart)]; ok {
+					if pp, ok := s.styleRef[fmt.Sprintf("%s", headerPart)]; ok {
 						for _, p := range pp {
 							if reflect.DeepEqual(p.StyleNames, headerStyle.StyleNames) {
 								p.Cell.EndCell = style.Cell{Col: colName, Row: 2}
@@ -160,12 +160,12 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 						sp = append(sp, headerStyle)
 					}
 
-					s.styleRef[fmt.Sprintf("%s", extra.HeaderPart)] = sp
+					s.styleRef[fmt.Sprintf("%s", headerPart)] = sp
 
 					styleString = typeField.Tag.Get("data-style")
 					// todo :暂不支持 太累了抱歉
-					//dataStyle := style.TagParse(styleString).Parse(extra.DataPart)
-					//s.styleRef[fmt.Sprintf("%s-%s", extra.DataPart, params[1])] = dataStyle
+					//dataStyle := style.TagParse(styleString).Parse(extra.dataPart)
+					//s.styleRef[fmt.Sprintf("%s-%s", extra.dataPart, params[1])] = dataStyle
 				}
 			}
 
