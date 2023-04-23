@@ -106,7 +106,7 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 			// 判断是excel tag 是指向哪个部分
 			params := strings.Split(partTag, "|")
 			if len(params) > 0 {
-				switch Part(params[0]) {
+				switch part(params[0]) {
 				case noticePart:
 					s.notice = val.Field(i).String()
 

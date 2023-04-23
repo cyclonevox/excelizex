@@ -315,7 +315,7 @@ func (f *File) writeHeader(s *sheet) (err error) {
 	return
 }
 
-func (f *File) setPartStyle(s *sheet, part Part) (err error) {
+func (f *File) setPartStyle(s *sheet, part part) (err error) {
 	if _style, ok := s.styleRef[string(part)]; ok {
 		if _style[0].AutoWide {
 			switch part {

@@ -9,13 +9,7 @@ type TagParse string
 
 type Parsed struct {
 	StyleNames []string
-	Cell       CellRange
 	AutoWide   bool
-}
-
-type CellRange struct {
-	StartCell Cell
-	EndCell   Cell
 }
 
 type Cell struct {
