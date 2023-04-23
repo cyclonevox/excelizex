@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cyclonevox/excelizex/style"
+	"github.com/xuri/excelize/v2"
 )
 
 const (
@@ -19,13 +20,32 @@ type part string
 
 type field string
 
-type meta struct {
-	style.Style
+type Meta interface {
+	Part() part
+	ColIndex() int
+	CellValue() string
+	ValidateTag() string
+	StyleTag() string
+}
 
-	Part      part
-	ColIndex  int
+// 用于存储表元信息，包含
+type metaRaw struct {
+	// 部分
+	Part part
+	// 样式 用于存储样式Tag内容
+	StyleTag string
+	// 验证字段 用于存储validate tag中的数据
+	validateTag string
+	// 列索引
+	ColIndex int
+	// Notice的值/表头的值
 	CellValue string
-	ConvFunc  *ConvertFunc
+}
+
+func (m *meta)
+
+type meta struct {
+
 }
 
 type metaRefs []*meta
@@ -111,7 +131,7 @@ func (m *metaCache) newMetaParse(typ reflect.Type, val reflect.Value, i int) {
 	tv := val.Field(i)
 
 	var mt *meta
-	// 1.检查该字段是否实现了动态扩展头方法。
+	// 1.检查该字段是否实现了动态扩展头接口。
 	if extHeader, ok := tv.Interface().(ExtHeader); ok {
 		extHeader.HeaderName()
 		extHeader.ValidateTag()
@@ -154,6 +174,57 @@ func (m *metaCache) newMetaParse(typ reflect.Type, val reflect.Value, i int) {
 	return
 }
 
-func parseHeader(s string) {
+// 解析tag 将notice解析到 cache 中便于查询
+func (m *metaCache) parseNotice(tag string) {
 
+}
+
+// 解析header 将header解析到 cache 中
+func (m *metaCache) parseHeader(tag string) {
+	// todo： 现在header的style暂时不能交叉设置，原因是会被覆盖，需要在后续改动
+	// todo： 现在header的style暂时不能交叉设置，原因是会被覆盖，需要在后续改动
+	m.header = append(s.header, params[1])
+	styleString := typeField.Tag.Get("style")
+	if styleString == "" {
+		continue
+	}
+
+	colName, err := excelize.ColumnNumberToName(len(s.header))
+	if err != nil {
+		panic(err)
+	}
+	headerStyle := style.TagParse(styleString).Parse()
+
+	// todo: 待优化
+	var sp []style.Parsed
+
+	var okk bool
+	if pp, ok := s.styleRef[fmt.Sprintf("%s", headerPart)]; ok {
+		for _, p := range pp {
+			if reflect.DeepEqual(p.StyleNames, headerStyle.StyleNames) {
+				p.Cell.EndCell = style.Cell{Col: colName, Row: 2}
+				okk = true
+			}
+			sp = append(sp, p)
+		}
+
+		if !okk {
+			headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
+			headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
+
+			sp = append(sp, headerStyle)
+		}
+	} else {
+		headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
+		headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
+
+		sp = append(sp, headerStyle)
+	}
+
+	s.styleRef[fmt.Sprintf("%s", headerPart)] = sp
+
+	styleString = typeField.Tag.Get("data-style")
+	// todo :暂不支持 太累了抱歉
+	//dataStyle := style.TagParse(styleString).Parse(extra.dataPart)
+	//s.styleRef[fmt.Sprintf("%s-%s", extra.dataPart, params[1])] = dataStyle
 }
