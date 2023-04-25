@@ -2,59 +2,47 @@ package excelizex
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
-
-	"github.com/cyclonevox/excelizex/style"
-	"github.com/xuri/excelize/v2"
 )
 
 const (
-	headerPart part = "header"
-	noticePart part = "notice"
-	dataPart   part = "data"
+	headerPart Part = "header"
+	noticePart Part = "notice"
+	dataPart   Part = "data"
 )
 
-type part string
-
-type field string
+type Part string
 
 type Meta interface {
-	Part() part
+	Part() Part
 	ColIndex() int
 	CellValue() string
 	ValidateTag() string
 	StyleTag() string
 }
 
-// 用于存储表元信息，包含
+// MetaRaw 用于存储表元信息，包含各种格式的元信息
 type metaRaw struct {
 	// 部分
-	Part part
+	part Part
 	// 样式 用于存储样式Tag内容
-	StyleTag string
+	styleTag string
 	// 验证字段 用于存储validate tag中的数据
 	validateTag string
 	// 列索引
-	ColIndex int
+	colIndex int
 	// Notice的值/表头的值
-	CellValue string
+	cellValue string
 }
 
-func (m *meta)
+type metaRefs []*metaRaw
 
-type meta struct {
-
-}
-
-type metaRefs []*meta
-
-func (m metaRefs) metaList() []*meta {
+func (m metaRefs) metaList() []*metaRaw {
 	return m
 }
 
-func (m metaRefs) binarySearch(index int) *meta {
+func (m metaRefs) binarySearch(index int) *metaRaw {
 	l := m.metaList()
 	i, low, high := 0, 0, len(l)-1
 	if high == 0 {
@@ -67,9 +55,9 @@ func (m metaRefs) binarySearch(index int) *meta {
 		// 初始化枢轴
 		mid := (low + high) / 2
 
-		if l[mid].ColIndex > index {
+		if l[mid].colIndex > index {
 			high = mid - 1
-		} else if l[mid].ColIndex < index {
+		} else if l[mid].colIndex < index {
 			low = mid + 1
 		} else {
 			return l[mid]
@@ -82,21 +70,8 @@ func (m metaRefs) binarySearch(index int) *meta {
 type metaCache struct {
 	typ   reflect.Type
 	val   reflect.Value
-	data  []*meta
-	cache map[field]metaRefs
-}
-
-func (m *metaCache) findMetaByIndex(index int) *meta {
-	return m.data[index]
-}
-
-func (m *metaCache) findMetaByFieldName(field field, index int) *meta {
-	return m.cache[field].binarySearch(index)
-}
-
-func (m *metaCache) setMeta(index int, f field, mt *meta) {
-	m.data[index] = mt
-	m.cache[f] = append(m.cache[f], mt)
+	data  []*metaRaw
+	cache map[string]metaRefs
 }
 
 func newMetaCache(a any) *metaCache {
@@ -106,7 +81,6 @@ func newMetaCache(a any) *metaCache {
 		typ = typ.Elem()
 		val = val.Elem()
 	}
-
 	if typ.Kind() != reflect.Struct {
 		panic(errors.New("generate function support using struct only"))
 	}
@@ -115,116 +89,84 @@ func newMetaCache(a any) *metaCache {
 	m := &metaCache{
 		typ:   typ,
 		val:   val,
-		data:  make([]*meta, numField, numField),
-		cache: make(map[field]metaRefs, numField),
+		data:  make([]*metaRaw, 0, numField),
+		cache: make(map[string]metaRefs, numField),
 	}
 
-	for i := 0; i < numField; i++ {
-		m.newMetaParse(typ, val, i)
-	}
+	m.newMetaParse(a)
 
 	return m
 }
 
-func (m *metaCache) newMetaParse(typ reflect.Type, val reflect.Value, i int) {
-	tf := typ.Field(i)
-	tv := val.Field(i)
+func (m *metaCache) findMetaByIndex(index int) *metaRaw {
+	return m.data[index]
+}
 
-	var mt *meta
-	// 1.检查该字段是否实现了动态扩展头接口。
-	if extHeader, ok := tv.Interface().(ExtHeader); ok {
-		extHeader.HeaderName()
-		extHeader.ValidateTag()
-		extHeader.StyleTag()
-		extHeader.Data()
+func (m *metaCache) findMetaByFieldName(field string, index int) *metaRaw {
+	return m.cache[field].binarySearch(index)
+}
 
-		mt = &meta{
-			Part:     headerPart,
-			ColIndex: i,
-		}
+func (m *metaCache) setMeta(field string, mt *metaRaw) {
+	m.data = append(m.data, mt)
+	m.cache[field] = append(m.cache[field], mt)
+}
 
-		m.setMeta(i, field(tf.Name), mt)
-	}
+func (m *metaCache) newMetaParse(a any) {
+	typ := reflect.TypeOf(a)
+	val := reflect.ValueOf(a)
 
-	// 2.是否包含了excel标签
-	t := tf.Tag.Get("excel")
-	if t == "" {
-		m = new(meta)
+	for i := 0; i < typ.NumField(); i++ {
+		tf := typ.Field(i)
+		tv := val.Field(i)
 
-		params := strings.Split(t, "|")
-		switch part(params[0]) {
-		case noticePart:
-			m.Part = noticePart
-			m.CellValue = fieldVal.String()
-
-			// 添加提示样式映射
-			styleString := f.Tag.Get("style")
-			if styleString == "" {
-				return
+		var mr *metaRaw
+		// 1.检查该字段是否实现了动态扩展头接口。
+		if extHeader, ok := tv.Interface().(Meta); ok {
+			mr = &metaRaw{
+				part:        extHeader.Part(),
+				styleTag:    extHeader.StyleTag(),
+				validateTag: extHeader.ValidateTag(),
+				colIndex:    i,
+				cellValue:   extHeader.CellValue(),
 			}
-			_noticeStyle := style.TagParse(styleString).Parse()
-			_noticeStyle.Cell = style.Cell{Col: "A", Row: 1}
-			_noticeStyle.Cell = style.Cell{Col: "A", Row: 1}
-			s.styleRef[fmt.Sprintf("%s", noticePart)] = []style.Parsed{_noticeStyle}
-		case headerPart:
-
 		}
+
+		// 2.是否包含了excel标签
+		t := tf.Tag.Get("excel")
+		if t == "" {
+			params := strings.Split(t, "|")
+			styleTag := tf.Tag.Get("styleTag")
+			validateTag := tf.Tag.Get("validateTag")
+			switch Part(params[0]) {
+			case noticePart:
+				// 原始数据存入metaCache
+				mr = m.parseTagOrExt(noticePart, styleTag, validateTag, tv.String())
+			case headerPart:
+				// 原始数据存入metaCache
+				mr = m.parseTagOrExt(headerPart, styleTag, validateTag, params[1])
+			}
+		}
+
+		m.setMeta(tf.Name, mr)
 	}
 
 	return
 }
 
-// 解析tag 将notice解析到 cache 中便于查询
-func (m *metaCache) parseNotice(tag string) {
+// 解析tag或者是扩展字段解析到 cache 中便于查询
+func (m *metaCache) parseTagOrExt(
+	part Part,
+	style string, validate string, cellValue string,
+) (mt *metaRaw) {
+	i := len(m.data)
 
-}
-
-// 解析header 将header解析到 cache 中
-func (m *metaCache) parseHeader(tag string) {
-	// todo： 现在header的style暂时不能交叉设置，原因是会被覆盖，需要在后续改动
-	// todo： 现在header的style暂时不能交叉设置，原因是会被覆盖，需要在后续改动
-	m.header = append(s.header, params[1])
-	styleString := typeField.Tag.Get("style")
-	if styleString == "" {
-		continue
+	mt = &metaRaw{
+		part:        part,
+		styleTag:    style,
+		validateTag: validate,
+		colIndex:    i + 1,
+		cellValue:   cellValue,
 	}
 
-	colName, err := excelize.ColumnNumberToName(len(s.header))
-	if err != nil {
-		panic(err)
-	}
-	headerStyle := style.TagParse(styleString).Parse()
-
-	// todo: 待优化
-	var sp []style.Parsed
-
-	var okk bool
-	if pp, ok := s.styleRef[fmt.Sprintf("%s", headerPart)]; ok {
-		for _, p := range pp {
-			if reflect.DeepEqual(p.StyleNames, headerStyle.StyleNames) {
-				p.Cell.EndCell = style.Cell{Col: colName, Row: 2}
-				okk = true
-			}
-			sp = append(sp, p)
-		}
-
-		if !okk {
-			headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
-			headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
-
-			sp = append(sp, headerStyle)
-		}
-	} else {
-		headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
-		headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
-
-		sp = append(sp, headerStyle)
-	}
-
-	s.styleRef[fmt.Sprintf("%s", headerPart)] = sp
-
-	styleString = typeField.Tag.Get("data-style")
-	// todo :暂不支持 太累了抱歉
-	//dataStyle := style.TagParse(styleString).Parse(extra.dataPart)
-	//s.styleRef[fmt.Sprintf("%s-%s", extra.dataPart, params[1])] = dataStyle
+	return
 }

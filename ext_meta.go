@@ -1,33 +1,36 @@
 package excelizex
 
-type ExtHeader interface {
-	HeaderName() string
-	ValidateTag() string
-	StyleTag() string
-	Data() any
-}
-
 var defExtHeader = DefaultExtHeader{}
 
 type DefaultExtHeader struct {
-	name     string
-	validate string
-	style    string
-	data     any
+	// 部分
+	ExtPart Part
+	// 样式 用于存储样式Tag内容
+	ExtStyleTag string
+	// 验证字段 用于存储validate tag中的数据
+	ExtValidateTag string
+	// 列索引
+	ExtColIndex int
+	// Notice的值/表头的值
+	ExtCellValue string
 }
 
-func (d DefaultExtHeader) HeaderName() string {
-	return d.name
+func (d DefaultExtHeader) Part() Part {
+	return d.ExtPart
+}
+
+func (d DefaultExtHeader) ColIndex() int {
+	return d.ExtColIndex
+}
+
+func (d DefaultExtHeader) CellValue() string {
+	return d.ExtCellValue
 }
 
 func (d DefaultExtHeader) ValidateTag() string {
-	return d.validate
+	return d.ExtValidateTag
 }
 
 func (d DefaultExtHeader) StyleTag() string {
-	return d.style
-}
-
-func (d DefaultExtHeader) Data() any {
-	return d.data
+	return d.ExtStyleTag
 }

@@ -16,10 +16,8 @@ const OptionsSaveTable = "选项数据表"
 
 type File struct {
 	selectSheetName string
-	// k:sheetName v:sheetName
-	sheets     map[string]*sheet
-	_excel     *excelize.File
-	styleCache map[string]*style.Payload
+	_excel          *excelize.File
+	styleCache      map[string]*style.Payload
 }
 
 func New(reader ...io.Reader) *File {
@@ -315,7 +313,7 @@ func (f *File) writeHeader(s *sheet) (err error) {
 	return
 }
 
-func (f *File) setPartStyle(s *sheet, part part) (err error) {
+func (f *File) setPartStyle(s *sheet, part Part) (err error) {
 	if _style, ok := s.styleRef[string(part)]; ok {
 		if _style[0].AutoWide {
 			switch part {

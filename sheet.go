@@ -2,11 +2,9 @@ package excelizex
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/cyclonevox/excelizex/style"
 	"github.com/xuri/excelize/v2"
@@ -22,11 +20,13 @@ type sheet struct {
 	header []string
 	// 数据
 	data [][]any
+
 	// 下拉选项 暂时只支持单列
 	pd *pullDown
-
+	// meta缓存
+	mc *metaCache
 	// 分布和style分配语句的配置
-	// v:part -> k:style string
+	// v:Part -> k:style string
 	styleRef map[string][]style.Parsed
 	// 写入到第几行,主要用于标记生成excel中的表时，需要续写的位置
 	writeRow int
@@ -39,6 +39,7 @@ func NewSheet(sheetName string, a any) *sheet {
 
 	s := &sheet{
 		name:     sheetName,
+		mc:       newMetaCache(a),
 		styleRef: make(map[string][]style.Parsed),
 		writeRow: 0,
 	}
@@ -95,82 +96,7 @@ func (s *sheet) setHeaderByStruct(a any) *sheet {
 		panic(errors.New("generate function support using struct only"))
 	}
 
-	for i := 0; i < typ.NumField(); i++ {
-		typeField := typ.Field(i)
-
-		partTag := typeField.Tag.Get("excel")
-		if partTag == "" {
-			continue
-		} else {
-
-			// 判断是excel tag 是指向哪个部分
-			params := strings.Split(partTag, "|")
-			if len(params) > 0 {
-				switch part(params[0]) {
-				case noticePart:
-					s.notice = val.Field(i).String()
-
-					// 添加提示样式映射
-					styleString := typeField.Tag.Get("style")
-					if styleString == "" {
-						continue
-					}
-					_noticeStyle := style.TagParse(styleString).Parse()
-					_noticeStyle.Cell.StartCell = style.Cell{Col: "A", Row: 1}
-					_noticeStyle.Cell.EndCell = style.Cell{Col: "A", Row: 1}
-					s.styleRef[fmt.Sprintf("%s", noticePart)] = []style.Parsed{_noticeStyle}
-
-				case headerPart:
-					// todo： 现在header的style暂时不能交叉设置，原因是会被覆盖，需要在后续改动
-					s.header = append(s.header, params[1])
-					styleString := typeField.Tag.Get("style")
-					if styleString == "" {
-						continue
-					}
-
-					colName, err := excelize.ColumnNumberToName(len(s.header))
-					if err != nil {
-						panic(err)
-					}
-					headerStyle := style.TagParse(styleString).Parse()
-
-					// todo: 待优化
-					var sp []style.Parsed
-
-					var okk bool
-					if pp, ok := s.styleRef[fmt.Sprintf("%s", headerPart)]; ok {
-						for _, p := range pp {
-							if reflect.DeepEqual(p.StyleNames, headerStyle.StyleNames) {
-								p.Cell.EndCell = style.Cell{Col: colName, Row: 2}
-								okk = true
-							}
-							sp = append(sp, p)
-						}
-
-						if !okk {
-							headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
-							headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
-
-							sp = append(sp, headerStyle)
-						}
-					} else {
-						headerStyle.Cell.StartCell = style.Cell{Col: colName, Row: 2}
-						headerStyle.Cell.EndCell = style.Cell{Col: colName, Row: 2}
-
-						sp = append(sp, headerStyle)
-					}
-
-					s.styleRef[fmt.Sprintf("%s", headerPart)] = sp
-
-					styleString = typeField.Tag.Get("data-style")
-					// todo :暂不支持 太累了抱歉
-					//dataStyle := style.TagParse(styleString).Parse(extra.dataPart)
-					//s.styleRef[fmt.Sprintf("%s-%s", extra.dataPart, params[1])] = dataStyle
-				}
-			}
-
-		}
-	}
+	s.mc.newMetaParse(a)
 
 	return s
 }
