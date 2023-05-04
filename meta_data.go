@@ -10,7 +10,7 @@ type metaData struct {
 	sheetName string
 	// 存储header原始数据
 	headers []string
-	// k:columns index v:Header name
+	// k:columns index v:ExtHeader name
 	colsIndexHeaderMap map[int]string
 	// k:header v:Struct Field Name
 	headerFieldName map[string]string

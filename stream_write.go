@@ -13,7 +13,7 @@ type StreamWritable interface {
 // AddSheetByStream 通过调用迭代器接口为excel文件来生成表.
 // 迭代器接口中的 RawData() 返回返回的值的结构体来作为生成表的头.时无需用传入option手动设置表头
 // Option 可设定表，需要注意的是，必须设定表名称.
-func (f *File) AddSheetByStream(i StreamWritable, sheet *sheet) (err error) {
+func (f *File) AddSheetByStream(i StreamWritable, sheet *Sheet) (err error) {
 	var sw *excelize.StreamWriter
 
 	f.addSheet(sheet)

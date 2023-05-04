@@ -18,9 +18,9 @@ type ConvertFunc func(rawData string) (any, error)
 type ImportFunc func(any any) error
 
 type Read struct {
-	// sheet metadata
+	// Sheet metadata
 	metaData *metaData
-	// sheet rows iterator
+	// Sheet rows iterator
 	rows *excelize.Rows
 	// import func for business
 	fn ImportFunc
@@ -43,7 +43,7 @@ func (f *File) Read(payload any, sheetName string) (r *Read) {
 	r = new(Read)
 
 	if f.selectSheetName == "" && len(sheetName) == 0 {
-		panic("plz setting select sheet")
+		panic("plz setting select Sheet")
 	}
 
 	var err error

@@ -75,7 +75,15 @@ func (f *File) addStyle(_style style.Style) {
 	return
 }
 
-func (f *File) genNewStyle(styleNames []string) (styleID int) {
+// getStyle
+func (f *File) getStyle(styleNames []string) (styleID int) {
+	// 已经存在的style会直接返回styleID
+	name := strings.Join(styleNames, "+")
+	if len(styleNames) <= 1 {
+		_style := f.styleCache[name]
+		return _style.StyleID
+	}
+
 	_style, ok := f.styleCache[styleNames[0]]
 	if ok {
 		for _, name := range styleNames {
@@ -129,7 +137,7 @@ func (f *File) AddSheet(name string, model any, options ...SetOptions) *File {
 	return f
 }
 
-func (f *File) AddFormattedSheets(sheets ...*sheet) *File {
+func (f *File) AddFormattedSheets(sheets ...*Sheet) *File {
 	var err error
 
 	for _, s := range sheets {
@@ -143,10 +151,10 @@ func (f *File) AddFormattedSheets(sheets ...*sheet) *File {
 	return f
 }
 
-func (f *File) addSheet(sheets ...*sheet) {
+func (f *File) addSheet(sheets ...*Sheet) {
 	for _, s := range sheets {
 		if s.name == "" || s.name == "Sheet1" {
-			panic("need a sheet name at least")
+			panic("need a Sheet name at least")
 		}
 
 		f._excel.NewSheet(s.name)
@@ -209,7 +217,7 @@ func (f *File) Buffer(password ...string) (*bytes.Buffer, error) {
 	return f.excel().WriteToBuffer()
 }
 
-func (f *File) setPullDown(s *sheet) (err error) {
+func (f *File) setPullDown(s *Sheet) (err error) {
 	if s.pd == nil {
 		return
 	}
@@ -245,7 +253,7 @@ func (f *File) setPullDown(s *sheet) (err error) {
 	return
 }
 
-func (f *File) writeDefaultFormatSheet(s *sheet) (err error) {
+func (f *File) writeDefaultFormatSheet(s *Sheet) (err error) {
 	// 遗憾的是我必须先将numFmt 和 未锁定 style给每一列设置好
 	if err = f.settingAllCol(s); err != nil {
 		return
@@ -270,7 +278,7 @@ func (f *File) writeDefaultFormatSheet(s *sheet) (err error) {
 	return
 }
 
-func (f *File) settingAllCol(s *sheet) (err error) {
+func (f *File) settingAllCol(s *Sheet) (err error) {
 	var colName string
 	// 设置表各列数据格式 数字默认为“文本,未锁定”
 	for i := range s.header {
@@ -285,7 +293,7 @@ func (f *File) settingAllCol(s *sheet) (err error) {
 	return
 }
 
-func (f *File) writeNotice(s *sheet) (err error) {
+func (f *File) writeNotice(s *Sheet) (err error) {
 	// 判断是否有提示并设置
 	// 根据换行设置单元格
 	if s.notice != "" {
@@ -293,7 +301,7 @@ func (f *File) writeNotice(s *sheet) (err error) {
 		if err = f.excel().SetCellValue(s.name, row, s.notice); err != nil {
 			return
 		}
-		if err = f.setPartStyle(s, noticePart); err != nil {
+		if err = f.noticeAdaptionWidth(s); err != nil {
 			return
 		}
 	}
@@ -301,58 +309,47 @@ func (f *File) writeNotice(s *sheet) (err error) {
 	return
 }
 
-func (f *File) writeHeader(s *sheet) (err error) {
+func (f *File) writeHeader(s *Sheet) (err error) {
 	row := s.nextWriteRow()
 	if err = f.excel().SetSheetRow(s.name, row, &s.header); err != nil {
 		return
 	}
-	if err = f.setPartStyle(s, headerPart); err != nil {
+	if err = f.headerAdaptionWidth(s); err != nil {
 		return
 	}
 
 	return
 }
 
-func (f *File) setPartStyle(s *sheet, part Part) (err error) {
-	if _style, ok := s.styleRef[string(part)]; ok {
-		if _style[0].AutoWide {
-			switch part {
-			case noticePart:
-				if err = f.noticeAdaptionWidth(s); err != nil {
-					return
-				}
-			case headerPart:
-				if err = f.headerAdaptionWidth(s); err != nil {
-					return
-				}
-			}
-		}
+func (f *File) setCellsStyle(s *Sheet) (err error) {
+	var (
+		cell string
+		row  = "1"
+	)
+	if _, ok := s.styleRef[-1]; ok {
+		row = "2"
+	}
 
-		var styleId int
-		for _, _s := range _style {
-			// 当该样式为组合样式时。则需要重新生成新样式
-			if len(_s.StyleNames) > 1 {
-				styleId = f.genNewStyle(_s.StyleNames)
-			} else if len(_s.StyleNames) == 1 {
-				styleId = f.styleCache[_s.StyleNames[0]].StyleID
-			}
-
-			// 设置该样式
-			if err = f.excel().SetCellStyle(
-				s.name,
-				_s.Cell.StartCell.Format(),
-				_s.Cell.EndCell.Format(),
-				styleId,
-			); nil != err {
+	for col, styles := range s.styleRef {
+		if col == -1 {
+			if err = f.excel().SetCellStyle(s.name, "A1", "A1", f.getStyle(styles)); err != nil {
 				return
 			}
+
+			continue
+		}
+
+		cell, err = excelize.ColumnNumberToName(col)
+		cell = row + cell
+		if err = f.excel().SetCellStyle(s.name, cell, cell, f.getStyle(styles)); err != nil {
+			return
 		}
 	}
 
 	return
 }
 
-func (f *File) headerAdaptionWidth(s *sheet) (err error) {
+func (f *File) headerAdaptionWidth(s *Sheet) (err error) {
 	var colName string
 	for i := range s.header {
 		if colName, err = excelize.ColumnNumberToName(1 + i); nil != err {
@@ -374,7 +371,7 @@ func (f *File) headerAdaptionWidth(s *sheet) (err error) {
 	return
 }
 
-func (f *File) noticeAdaptionWidth(s *sheet) (err error) {
+func (f *File) noticeAdaptionWidth(s *Sheet) (err error) {
 	var (
 		columnNumber string
 		max          int
@@ -400,7 +397,7 @@ func (f *File) noticeAdaptionWidth(s *sheet) (err error) {
 	return
 }
 
-func (f *File) writeData(s *sheet) (err error) {
+func (f *File) writeData(s *Sheet) (err error) {
 	// 判断是否有预置数据并设置
 	if len(s.data) != 0 {
 		for _, d := range s.data {
