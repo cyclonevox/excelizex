@@ -407,7 +407,7 @@ func (f *File) noticeAdaptionWidth(s *Sheet) (err error) {
 
 func (f *File) writeData(s *Sheet) (err error) {
 	// 判断是否有预置数据并设置
-	if len(*s.data) != 0 {
+	if s.data != nil {
 		for _, d := range *s.data {
 			var (
 				row  = s.nextWriteRow()

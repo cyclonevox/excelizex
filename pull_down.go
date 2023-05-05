@@ -1,6 +1,8 @@
 package excelizex
 
-import "reflect"
+import (
+	"reflect"
+)
 
 // 下拉结构，包含对应的列和具体的选项
 type pullDown struct {
@@ -52,10 +54,13 @@ func (p *pullDown) addOptions(col string, options any) *pullDown {
 }
 
 func (p *pullDown) sheet(name string) *Sheet {
-	s := NewSheet(name+OptionsSaveTable, nil)
+	s := &Sheet{name: name + OptionsSaveTable}
+
+	sData := make([][]any, 0, len(p.data()))
 	for _, pd := range p.data() {
-		*s.data = append(*s.data, getRowData(pd))
+		sData = append(sData, getRowData(pd))
 	}
+	s.data = &sData
 
 	return s
 }

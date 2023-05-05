@@ -57,15 +57,18 @@ func (mr *metaRaws) sheet(sheetName string) *Sheet {
 	for _, raw := range mr.raws {
 		if raw.part == noticePart {
 			s.notice = raw.cellValue
-
-			styles := strings.Split(raw.styleTag, "+")
-			s.styleRef[-1] = styles
+			if raw.styleTag != "" {
+				styles := strings.Split(raw.styleTag, "+")
+				s.styleRef[-1] = styles
+			}
 		}
 
 		if raw.part == headerPart {
 			s.header = append(s.header, raw.cellValue)
-			styles := strings.Split(raw.styleTag, "+")
-			s.styleRef[raw.colIndex] = styles
+			if raw.styleTag != "" {
+				styles := strings.Split(raw.styleTag, "+")
+				s.styleRef[raw.colIndex] = styles
+			}
 		}
 	}
 
