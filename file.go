@@ -267,6 +267,10 @@ func (f *File) writeDefaultFormatSheet(s *Sheet) (err error) {
 		return
 	}
 
+	if err = f.setCellsStyle(s); err != nil {
+		return
+	}
+
 	if err = f.setPullDown(s); err != nil {
 		return
 	}
@@ -323,8 +327,9 @@ func (f *File) writeHeader(s *Sheet) (err error) {
 
 func (f *File) setCellsStyle(s *Sheet) (err error) {
 	var (
-		cell string
-		row  = "1"
+		column string
+		cell   string
+		row    = "1"
 	)
 	if _, ok := s.styleRef[-1]; ok {
 		row = "2"
@@ -339,8 +344,11 @@ func (f *File) setCellsStyle(s *Sheet) (err error) {
 			continue
 		}
 
-		cell, err = excelize.ColumnNumberToName(col)
-		cell = row + cell
+		if column, err = excelize.ColumnNumberToName(col); err != nil {
+			return
+		}
+
+		cell = column + row
 		if err = f.excel().SetCellStyle(s.name, cell, cell, f.getStyle(styles)); err != nil {
 			return
 		}
