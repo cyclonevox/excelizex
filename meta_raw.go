@@ -1,8 +1,6 @@
 package excelizex
 
 import (
-	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 )
@@ -15,7 +13,15 @@ const (
 
 type Part string
 
+const (
+	ParseTypeStruct ParseType = 1
+	ParseTypeData   ParseType = 0
+)
+
+type ParseType int
+
 type HeaderMeta interface {
+	ExtData() any
 	ExtHeader() string
 	ExtValidateTag() string
 	ExtStyleTag() string
@@ -37,24 +43,22 @@ type metaRaw struct {
 
 type metaRaws struct {
 	cursor int
+	parsed bool
 	raws   []*metaRaw
-}
+	set    map[int]struct{}
 
-func newMetas(a any) *metaRaws {
-	r := &metaRaws{
-		cursor: 1,
-		raws:   make([]*metaRaw, 0),
-	}
-
-	r.parseMeta(a)
-
-	return r
+	hasData bool
+	data    [][]any
 }
 
 func (mr *metaRaws) sheet(sheetName string) *Sheet {
 	s := &Sheet{
 		name:     sheetName,
 		styleRef: make(map[int][]string),
+	}
+
+	if mr.hasData {
+		s.data = &mr.data
 	}
 
 	for _, raw := range mr.raws {
@@ -75,110 +79,29 @@ func (mr *metaRaws) sheet(sheetName string) *Sheet {
 	return s
 }
 
-func (mr *metaRaws) append(raw *metaRaw, moveCursor ...int) {
-	mr.raws = append(mr.raws, raw)
-
-	if len(moveCursor) != 0 {
-		mr.cursor += moveCursor[0]
+func newMetas(a any) *metaRaws {
+	r := &metaRaws{
+		cursor: 1,
+		set:    map[int]struct{}{},
+		raws:   make([]*metaRaw, 0),
 	}
-}
 
-func (mr *metaRaws) parseMeta(a any) {
 	val := reflect.ValueOf(a)
-	typ := reflect.TypeOf(a)
-
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-		val = val.Elem()
-	}
-
-	if typ.Kind() != reflect.Struct {
-		panic(errors.New("generate function support using struct only"))
-	}
-
-	for i := 0; i < val.NumField(); i++ {
-		field := val.Field(i)
-
-		// 若字段为拓展字段则进行处理，存储为Meta原始数据
-		if meta, ok := field.Interface().(HeaderMeta); ok {
-			mr.append(&metaRaw{
-				part:        headerPart,
-				styleTag:    meta.ExtStyleTag(),
-				validateTag: meta.ExtValidateTag(),
-				colIndex:    mr.cursor,
-				cellValue:   meta.ExtHeader(),
-			}, 1)
-
-			continue
-		}
-
-		// 2.是否包含了excel标签
-		t := typ.Field(i).Tag.Get("excel")
-		params := strings.Split(t, "|")
-		if t != "" {
-			styleTag := typ.Field(i).Tag.Get("style")
-			validateTag := typ.Field(i).Tag.Get("validate")
-			switch Part(params[0]) {
-			case noticePart:
-				// 原始数据存入metaCache
-				mr.append(&metaRaw{
-					part:        noticePart,
-					styleTag:    styleTag,
-					validateTag: validateTag,
-					colIndex:    -1,
-					cellValue:   field.String(),
-				}, 2)
-			case headerPart:
-				if len(params) < 2 {
-					panic(
-						fmt.Sprintf(
-							"%s header tag format error : %s .Using header|xxx format",
-							typ.Field(i).Name, t,
-						),
-					)
-				}
-
-				// 原始数据存入metaCache
-				mr.append(&metaRaw{
-					part:        headerPart,
-					styleTag:    styleTag,
-					validateTag: validateTag,
-					colIndex:    mr.cursor,
-					cellValue:   params[1],
-				}, 1)
+	// Slice字段则进入下层循环，可直接导入数据
+	if val.Kind() == reflect.Slice {
+		for j := 0; j < val.Len(); j++ {
+			if j > 0 {
+				r.parsed = true
 			}
+
+			r.hasData = true
+			r.data = make([][]any, val.Len())
+			r.parseMeta(val.Index(j).Interface(), j)
 		}
-
-		// 结构体字段做递归处理
-		if field.Kind() == reflect.Struct && (t != "" && params[0] == "extend") {
-			mr.parseMeta(field.Interface())
-		}
-
-		// Slice字段则进入下层循环
-		if field.Kind() == reflect.Slice && (t != "" && params[0] == "extend") {
-			for j := 0; j < field.Len(); j++ {
-				if _, ok := field.Index(j).Interface().(HeaderMeta); ok {
-					mr.parseExtMetaList(field.Index(j))
-
-					continue
-				}
-
-				mr.parseMeta(field.Index(j).Interface())
-			}
-		}
-
+	} else {
+		r.hasData = false
+		r.parseMeta(a, 0)
 	}
-}
 
-func (mr *metaRaws) parseExtMetaList(field reflect.Value) {
-	// 若字段为拓展字段则进行处理，存储为Meta原始数据
-	if meta, ok := field.Interface().(HeaderMeta); ok {
-		mr.append(&metaRaw{
-			part:        headerPart,
-			styleTag:    meta.ExtStyleTag(),
-			validateTag: meta.ExtValidateTag(),
-			colIndex:    mr.cursor,
-			cellValue:   meta.ExtHeader(),
-		}, 1)
-	}
+	return r
 }

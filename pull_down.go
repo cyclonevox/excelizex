@@ -54,7 +54,7 @@ func (p *pullDown) addOptions(col string, options any) *pullDown {
 func (p *pullDown) sheet(name string) *Sheet {
 	s := NewSheet(name+OptionsSaveTable, nil)
 	for _, pd := range p.data() {
-		s.data = append(s.data, getRowData(pd))
+		*s.data = append(*s.data, getRowData(pd))
 	}
 
 	return s

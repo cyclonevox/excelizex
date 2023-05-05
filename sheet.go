@@ -17,7 +17,7 @@ type Sheet struct {
 	// 表头
 	header []string
 	// 数据
-	data [][]any
+	data *[][]any
 
 	// 下拉选项 暂时只支持单列
 	pd *pullDown
