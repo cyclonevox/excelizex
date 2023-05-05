@@ -2,7 +2,6 @@ package excelizex
 
 import (
 	"reflect"
-	"regexp"
 	"strconv"
 
 	"github.com/xuri/excelize/v2"
@@ -77,35 +76,34 @@ func getRowData(row any) (list []any) {
 	return
 }
 
-// findHeaderColumnName 寻找表头名称或者是列名称
-func (s *Sheet) findHeaderColumnName(headOrColName string) (columnName string, err error) {
-	for i, h := range s.header {
-		if h == headOrColName {
-			columnName, err = excelize.ColumnNumberToName(i + 1)
+// findHeaderColumnNames 寻找表头名称或者是列名称
+func (s *Sheet) findHeaderColumnNames(headName string) (columnNames []string, err error) {
+	var columnName string
 
-			return
+	for i, h := range s.header {
+		if h == headName {
+			if columnName, err = excelize.ColumnNumberToName(i + 1); err != nil {
+				return
+			}
+
+			columnNames = append(columnNames, columnName)
 		}
 	}
-
-	regular := `[A-Z]+`
-	reg := regexp.MustCompile(regular)
-	if !reg.MatchString(headOrColName) {
-		panic("plz use A-Z ColName or HeaderName for option name ")
-	}
-
-	columnName = headOrColName
 
 	return
 }
 
 // SetOptions 设置下拉的选项
 func (s *Sheet) SetOptions(headOrColName string, options any) *Sheet {
-	name, err := s.findHeaderColumnName(headOrColName)
+	names, err := s.findHeaderColumnNames(headOrColName)
 	if err != nil {
 		panic(err)
 	}
 
-	pd := newPullDown().addOptions(name, options)
+	pd := newPullDown()
+	for _, name := range names {
+		pd.addOptions(name, options)
+	}
 
 	if s.pd == nil {
 		s.pd = pd
