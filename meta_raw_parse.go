@@ -10,12 +10,13 @@ import (
 func (mr *metaRaws) append(raw *metaRaw, sliceIndex int, data ...any) {
 	if !mr.parsed {
 		mr.raws = append(mr.raws, raw)
-		mr.set[raw.colIndex] = struct{}{}
-		mr.cursor += 1
+		if raw.part != noticePart {
+			mr.cursor += 1
+		}
 	}
 
 	if mr.hasData && len(data) > 0 && raw.part != noticePart {
-		mr.data[sliceIndex] = append(mr.data[sliceIndex], data)
+		mr.data[sliceIndex] = append(mr.data[sliceIndex], data...)
 	}
 
 }

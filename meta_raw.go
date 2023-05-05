@@ -38,7 +38,6 @@ type metaRaws struct {
 	cursor int
 	parsed bool
 	raws   []*metaRaw
-	set    map[int]struct{}
 
 	hasData bool
 	data    [][]any
@@ -78,7 +77,6 @@ func (mr *metaRaws) sheet(sheetName string) *Sheet {
 func newMetas(a any) *metaRaws {
 	r := &metaRaws{
 		cursor: 1,
-		set:    map[int]struct{}{},
 		raws:   make([]*metaRaw, 0),
 	}
 

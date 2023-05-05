@@ -80,8 +80,7 @@ func (f *File) getStyle(styleNames []string) (styleID int) {
 	// 已经存在的style会直接返回styleID
 	name := strings.Join(styleNames, "+")
 	if len(styleNames) <= 1 {
-		_style := f.styleCache[name]
-		return _style.StyleID
+		return f.styleCache[name].StyleID
 	}
 
 	_style, ok := f.styleCache[styleNames[0]]
@@ -349,7 +348,8 @@ func (f *File) setCellsStyle(s *Sheet) (err error) {
 		}
 
 		cell = column + row
-		if err = f.excel().SetCellStyle(s.name, cell, cell, f.getStyle(styles)); err != nil {
+		a := f.getStyle(styles)
+		if err = f.excel().SetCellStyle(s.name, cell, cell, a); err != nil {
 			return
 		}
 	}
