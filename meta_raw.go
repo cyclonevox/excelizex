@@ -13,13 +13,6 @@ const (
 
 type Part string
 
-const (
-	ParseTypeStruct ParseType = 1
-	ParseTypeData   ParseType = 0
-)
-
-type ParseType int
-
 type HeaderMeta interface {
 	ExtData() any
 	ExtHeader() string
@@ -89,13 +82,13 @@ func newMetas(a any) *metaRaws {
 	val := reflect.ValueOf(a)
 	// Slice字段则进入下层循环，可直接导入数据
 	if val.Kind() == reflect.Slice {
+		r.data = make([][]any, val.Len())
 		for j := 0; j < val.Len(); j++ {
+			r.hasData = true
 			if j > 0 {
 				r.parsed = true
 			}
 
-			r.hasData = true
-			r.data = make([][]any, val.Len())
 			r.parseMeta(val.Index(j).Interface(), j)
 		}
 	} else {

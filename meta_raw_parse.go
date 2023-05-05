@@ -82,7 +82,7 @@ func (mr *metaRaws) parseMeta(a any, sliceIndex int) {
 					validateTag: validateTag,
 					colIndex:    mr.cursor,
 					cellValue:   params[1],
-				}, sliceIndex, field.String())
+				}, sliceIndex, field.Interface())
 			}
 		}
 

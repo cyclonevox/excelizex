@@ -66,7 +66,7 @@ func TestGenerateSheet(t *testing.T) {
 
 		m := newMetas(hasdata)
 		for _, rr := range m.data {
-			fmt.Println(rr)
+			t.Log(rr)
 		}
 
 		newSheet := NewSheet("helloWorld", hasdata)
