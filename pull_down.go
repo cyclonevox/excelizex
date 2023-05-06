@@ -4,6 +4,18 @@ import (
 	"reflect"
 )
 
+type SetOptions struct {
+	HeadOrColName string
+	Options       any
+}
+
+func NewOptions(headOrColName string, options any) SetOptions {
+	return SetOptions{
+		HeadOrColName: headOrColName,
+		Options:       options,
+	}
+}
+
 // 下拉结构，包含对应的列和具体的选项
 type pullDown struct {
 	target  map[string]*PullDownData

@@ -22,22 +22,24 @@ type metaData struct {
 	payload any
 }
 
-func newMetaData() *metaData {
-	return &metaData{
+func (mr *metaRaws) newMetaData() (md *metaData) {
+	md = &metaData{
 		headers:                make([]string, 0),
 		colsIndexHeaderMap:     make(map[int]string, 0),
 		headerFieldName:        make(map[string]string),
 		headerMappingConverter: make(map[string]string),
 		converter:              make(map[string]ConvertFunc),
 	}
-}
 
-func (e *metaData) addHeader(header string) {
-	e.headers = append(e.headers, header)
-}
+	for _, raw := range mr.raws {
+		// 加入header
+		if raw.part == headerPart {
+			md.headers = append(md.headers, raw.cellValue)
+			md.headerFieldName[raw.cellValue] = fieldName
+		}
+	}
 
-func (e *metaData) addHeaders(headers []string) {
-	e.headers = append(e.headers, headers...)
+	return
 }
 
 func (e *metaData) addHeaderFieldName(header, fieldName string) {

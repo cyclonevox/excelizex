@@ -7,6 +7,8 @@ type DefaultExtHeader struct {
 	StyleTag string
 	// 验证字段 用于存储validate tag中的数据
 	ValidateTag string
+	// 转换器名称
+	Convertor string
 	// 数据字段 用于存储数据 可直接生成在表中
 	Data any
 }
@@ -25,4 +27,8 @@ func (d DefaultExtHeader) ExtValidateTag() string {
 
 func (d DefaultExtHeader) ExtStyleTag() string {
 	return d.StyleTag
+}
+
+func (d DefaultExtHeader) ExtConvertor() string {
+	return d.Convertor
 }

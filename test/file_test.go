@@ -8,6 +8,7 @@ import (
 )
 
 func TestGenerateFile(t *testing.T) {
+
 	t.Run("no_data_no_style", func(t *testing.T) {
 		err := excelizex.New().AddSheet("helloWorld", new(noStyle)).SaveAs("./xlsx/no_data_no_style.xlsx")
 		if err != nil {

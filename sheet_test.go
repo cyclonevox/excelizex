@@ -17,6 +17,7 @@ type TestHasStyle struct {
 	Name   string `excel:"header|学生姓名" style:"default-header"`
 	Phone  int    `excel:"header|学生号码" style:"default-header-red"`
 	Id     int    `excel:"header|学生编号" style:"default-header-red"`
+	p      []*TestNoStyle
 }
 
 func TestGenerateSheet(t *testing.T) {

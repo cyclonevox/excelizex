@@ -36,7 +36,6 @@ func (mr *metaRaws) parseMeta(a any, sliceIndex int) {
 
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
-
 		// 若字段为拓展字段则进行处理，存储为Meta原始数据
 		if meta, ok := field.Interface().(HeaderMeta); ok {
 			mr.append(&metaRaw{

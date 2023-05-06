@@ -17,6 +17,7 @@ const OptionsSaveTable = "选项数据表"
 type File struct {
 	selectSheetName string
 	_excel          *excelize.File
+	sheetCache      map[string]*Sheet
 	styleCache      map[string]*style.Payload
 }
 
@@ -106,18 +107,6 @@ func (f *File) getStyle(styleNames []string) (styleID int) {
 	return styleID
 }
 
-type SetOptions struct {
-	HeadOrColName string
-	Options       any
-}
-
-func NewOptions(headOrColName string, options any) SetOptions {
-	return SetOptions{
-		HeadOrColName: headOrColName,
-		Options:       options,
-	}
-}
-
 func (f *File) AddSheet(name string, model any, options ...SetOptions) *File {
 	var err error
 
@@ -157,7 +146,19 @@ func (f *File) addSheet(sheets ...*Sheet) {
 		}
 
 		f._excel.NewSheet(s.name)
+		f.sheetCache[s.name] = s
 	}
+}
+
+func (f *File) findSheet(sheetName string) (s *Sheet) {
+	var ok bool
+	if s, ok = f.sheetCache[sheetName]; ok {
+		return s
+	} else {
+		panic(fmt.Sprintf("don't find this sheet: %s", sheetName))
+	}
+
+	return
 }
 
 func (f *File) Unlock(password string) (file *File, err error) {

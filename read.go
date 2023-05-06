@@ -51,13 +51,17 @@ func (f *File) Read(payload any, sheetName string) (r *Read) {
 		panic(err)
 	}
 
+	s := f.findSheet(sheetName)
+	r.metaData = newMetaData()
+	r.metaData.setHeaders(s.header)
+	r.metaData.payload = payload
+
 	if err = r.newMetaData(payload); err != nil {
 		r.err = err
 
 		return
 	}
 
-	r.metaData.payload = payload
 	r.results = new(Result)
 	r.results.SheetName = sheetName
 
@@ -65,14 +69,6 @@ func (f *File) Read(payload any, sheetName string) (r *Read) {
 }
 
 func (r *Read) newMetaData(ptr any) (err error) {
-	typ := reflect.TypeOf(ptr)
-	val := reflect.ValueOf(ptr)
-
-	if typ.Kind() != reflect.Pointer || typ.Elem().Kind() != reflect.Struct {
-		err = errors.New("read function support struct type variable's Pointer type only")
-
-		return
-	}
 
 	r.metaData = newMetaData()
 
@@ -83,7 +79,6 @@ func (r *Read) newMetaData(ptr any) (err error) {
 		if hasTag != "" {
 			split := strings.Split(hasTag, "|")
 			if split[0] == string(headerPart) {
-				r.metaData.addHeader(split[1])
 				r.metaData.addHeaderFieldName(split[1], field.Name)
 
 				convTag := field.Tag.Get("excel-conv")

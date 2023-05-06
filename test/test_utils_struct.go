@@ -29,6 +29,11 @@ type batchData struct {
 	Phone string `excel:"header|phoneNumber"`
 }
 
+type batchDataHasDynamic struct {
+	Id    string `excel:"header|userId" excel-conv:"id-string"`
+	Phone string `excel:"header|phoneNumber"`
+}
+
 type noStyle struct {
 	Notice string `excel:"notice"`
 	Name   string `excel:"header|学生姓名"`
