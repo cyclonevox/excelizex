@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cyclonevox/excelizex/extra"
-	"github.com/panjf2000/ants/v2"
-	"github.com/xuri/excelize/v2"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/cyclonevox/excelizex/extra"
+	"github.com/panjf2000/ants/v2"
+	"github.com/xuri/excelize/v2"
 )
 
 type ConvertFunc func(rawData string) (any, error)
@@ -252,11 +253,14 @@ func (r *Read) exec(row int, columns []string) {
 }
 
 func (r *Read) dataMapping(columns []string) (ptr any, err error) {
+	realCols := make([]string, 0, len(r.metaData.headers))
+	realCols = append(realCols, columns...)
+
 	ptr = r.payloadPool.Get()
 
 	obj := reflect.ValueOf(ptr).Elem()
 
-	for index, col := range columns {
+	for index, col := range realCols {
 		fieldName := r.metaData.getHeaderFieldName(index)
 		if fieldName == "" {
 			continue
