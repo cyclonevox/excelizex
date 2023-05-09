@@ -253,8 +253,11 @@ func (r *Read) exec(row int, columns []string) {
 }
 
 func (r *Read) dataMapping(columns []string) (ptr any, err error) {
-	realCols := make([]string, 0, len(r.metaData.headers))
-	realCols = append(realCols, columns...)
+	// fix v0.1.5 bug,do not check columns length
+	realCols := make([]string, len(r.metaData.headers), len(r.metaData.headers))
+	for j, col := range columns {
+		realCols[j] = col
+	}
 
 	ptr = r.payloadPool.Get()
 
