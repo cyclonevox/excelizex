@@ -1,13 +1,15 @@
 package excelizex
 
 import (
-	"github.com/xuri/excelize/v2"
 	"strconv"
 	"sync"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type Result struct {
-	sector       int
+	totalRow     int
+	errorRow     int
 	dataStartRow int
 	SheetName    string
 	Notice       string

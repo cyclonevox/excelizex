@@ -222,6 +222,9 @@ func (r *Read) Run(fn ImportFunc, num ...int) (results *Result, err error) {
 
 	r.wg.Wait()
 
+	r.results.totalRow = row - r.results.dataStartRow
+	r.results.errorRow = len(r.results.errors)
+
 	results = r.results
 
 	return
