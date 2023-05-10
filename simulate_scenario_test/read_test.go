@@ -1,6 +1,7 @@
 package simulateTest
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -55,7 +56,8 @@ func Test_Batch_Read(t *testing.T) {
 	})
 
 	t.Run("each_business_cost_200ms_10_goroutine", func(t *testing.T) {
-		_, err = r.Run(func(any any) (err error) {
+		var rr *excelizex.Result
+		rr, err = r.Run(func(any any) (err error) {
 			b := any.(*batchData)
 			time.Sleep(200 * time.Millisecond)
 			fmt.Println(b)
@@ -66,17 +68,24 @@ func Test_Batch_Read(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+
+		fmt.Println(rr.TotalNum())
+		fmt.Println(rr.ErrorNum())
 	})
 
 	t.Run("each_business_cost_200ms_100_goroutine", func(t *testing.T) {
-		if _, err = r.Run(func(any any) (err error) {
+		var rr *excelizex.Result
+		if rr, err = r.Run(func(any any) (err error) {
 			b := any.(*batchData)
 			time.Sleep(200 * time.Millisecond)
 			fmt.Println(b)
 
-			return
+			return errors.New("test")
 		}, 100); err != nil {
 			t.Error(err)
 		}
+
+		fmt.Println(rr.TotalNum())
+		fmt.Println(rr.ErrorNum())
 	})
 }

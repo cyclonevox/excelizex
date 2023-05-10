@@ -190,6 +190,7 @@ func (r *Read) Run(fn ImportFunc, num ...int) (results *Result, err error) {
 
 	var (
 		row         int
+		dataRow     int
 		headerFound bool
 	)
 	for r.rows.Next() {
@@ -211,6 +212,7 @@ func (r *Read) Run(fn ImportFunc, num ...int) (results *Result, err error) {
 		}
 
 		r.wg.Add(1)
+		dataRow++
 		// 向携程池提交任务
 		if err = r.concPool.Submit(func() {
 			r.exec(row, columns)
@@ -222,7 +224,7 @@ func (r *Read) Run(fn ImportFunc, num ...int) (results *Result, err error) {
 
 	r.wg.Wait()
 
-	r.results.totalRow = row - r.results.dataStartRow
+	r.results.totalRow = dataRow
 	r.results.errorRow = len(r.results.errors)
 
 	results = r.results
