@@ -33,6 +33,14 @@ func (r *Result) addError(info ErrorInfo) {
 	r.errors = append(r.errors, info)
 }
 
+func (r *Result) TotalNum() int {
+	return r.totalRow
+}
+
+func (r *Result) ErrorNum() int {
+	return r.errorRow
+}
+
 func (f *File) removeDataLine(results *Result) (err error) {
 	var rows *excelize.Rows
 	if rows, err = f.excel().Rows(results.SheetName); err != nil {
