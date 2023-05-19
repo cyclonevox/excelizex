@@ -73,8 +73,8 @@ var DefaultNumFmtText = NewDefaultStyle("numFmtText", numFmtText)
 var DefaultLocked = NewDefaultStyle("default-locked", locked)
 var DefaultNoLocked = NewDefaultStyle("default-no-locked", noLocked)
 
-var locked = &excelize.Style{Protection: &excelize.Protection{Locked: true}}
-var noLocked = &excelize.Style{Protection: &excelize.Protection{Locked: false}}
+var locked = &excelize.Style{Protection: &excelize.Protection{Locked: true}, NumFmt: 49}
+var noLocked = &excelize.Style{Protection: &excelize.Protection{Locked: false}, NumFmt: 49}
 var numFmtText = &excelize.Style{NumFmt: 49}
 var redFont = &excelize.Style{
 	Font: &excelize.Font{
