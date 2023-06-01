@@ -193,6 +193,10 @@ func (r *Read) Run(fn ImportFunc, num ...int) (results *Result, err error) {
 			panic(err)
 		}
 
+		if len(columns) == 0 {
+			continue
+		}
+
 		// 寻找表头，并将行数与关联存于map作为缓存,并将关联的表存储进
 		if !headerFound {
 			headerFound = r.metaData.findHeadersMap(columns)
