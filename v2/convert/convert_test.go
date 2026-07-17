@@ -101,3 +101,40 @@ func TestNamedConverter(t *testing.T) {
 		t.Fatalf("got %d", n)
 	}
 }
+
+func TestBuiltinUintAndTime(t *testing.T) {
+	var u uint
+	v := reflect.ValueOf(&u).Elem()
+	if err := convert.To("99", v, "", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if u != 99 {
+		t.Fatalf("uint: %d", u)
+	}
+
+	var tm time.Time
+	tv := reflect.ValueOf(&tm).Elem()
+	if err := convert.To("", tv, "", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if !tm.IsZero() {
+		t.Fatalf("empty time: %v", tm)
+	}
+	if err := convert.To("2024/06/01", tv, "", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if tm.Year() != 2024 || tm.Month() != time.June {
+		t.Fatalf("common layout time: %v", tm)
+	}
+}
+
+func TestAssignConvertible(t *testing.T) {
+	var dst int
+	v := reflect.ValueOf(&dst).Elem()
+	if err := convert.To("3", v, "", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if dst != 3 {
+		t.Fatalf("got %d", dst)
+	}
+}
