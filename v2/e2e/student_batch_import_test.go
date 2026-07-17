@@ -13,11 +13,7 @@ import (
 )
 
 func TestStudentBatchImportHappyPath(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "110101199001011234", "18", "A"},
-		{"李四", "110101199002021234", "20", "B"},
-	})
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_ok.xlsx")
 	defer wb.Close()
 
 	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
@@ -44,11 +40,7 @@ func TestStudentBatchImportHappyPath(t *testing.T) {
 }
 
 func TestStudentBatchImportEmptyName(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "110101199001011234", "18", "A"},
-		{"", "110101199002021234", "20", "B"},
-	})
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_empty_name.xlsx")
 	defer wb.Close()
 
 	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).

@@ -42,10 +42,7 @@ func TestReadNoticeTagDoesNotRequireNoticeRow(t *testing.T) {
 }
 
 func TestReadWrongSheetName(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "110101199001011234", "18", "A"},
-	})
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_ok.xlsx")
 	defer wb.Close()
 
 	_, _, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet("不存在")).

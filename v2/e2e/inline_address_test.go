@@ -7,14 +7,15 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestInlineAddressWriteRead(t *testing.T) {
-	buf := fixture.BuildInlineAddressFile(t)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "inline_address.xlsx")
 	defer wb.Close()
 
-	rows, res, err := excelizex.Read[fixture.InlineAddressRow](wb.Sheet("地址导入")).
+	rows, res, err := excelizex.Read[fixture.InlineAddressRow](wb.Sheet("地址导入").
+		WithLayout(layout.NoticeHeaderData{})).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -32,13 +33,15 @@ func TestInlineAddressWriteRead(t *testing.T) {
 	// 库 round-trip 导出再导入
 	wbOut := excelizex.New()
 	defer wbOut.Close()
-	if err := excelizex.Write[fixture.InlineAddressRow](wbOut.Sheet("地址导入")).
+	if err := excelizex.Write[fixture.InlineAddressRow](wbOut.Sheet("地址导入").
+		WithLayout(layout.NoticeHeaderData{})).
 		Rows(rows[0]).
 		Apply(); err != nil {
 		t.Fatal(err)
 	}
 	wb2 := fixture.RoundTripSave(t, wbOut)
-	rows2, res2, err := excelizex.Read[fixture.InlineAddressRow](wb2.Sheet("地址导入")).
+	rows2, res2, err := excelizex.Read[fixture.InlineAddressRow](wb2.Sheet("地址导入").
+		WithLayout(layout.NoticeHeaderData{})).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)

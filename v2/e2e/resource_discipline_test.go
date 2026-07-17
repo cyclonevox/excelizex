@@ -9,13 +9,18 @@ import (
 )
 
 func TestResourceDisciplineOpenPath(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{{"张三", "", "18", "A"}})
+	src, err := os.Open(fixture.TestdataPath("students_notice_ok.xlsx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer src.Close()
+
 	tmp, err := os.CreateTemp(t.TempDir(), "excelizex-e2e-*.xlsx")
 	if err != nil {
 		t.Fatal(err)
 	}
 	filePath := tmp.Name()
-	if _, err := tmp.Write(buf.Bytes()); err != nil {
+	if _, err := tmp.ReadFrom(src); err != nil {
 		t.Fatal(err)
 	}
 	if err := tmp.Close(); err != nil {

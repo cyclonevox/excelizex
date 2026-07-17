@@ -7,18 +7,15 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestTimeAndBoolFieldsRoundTrip(t *testing.T) {
-	joined := fixture.ParseJoined("2024-09-01")
-	buf := fixture.WriteTimeBoolSheet(t,
-		fixture.TimeBoolRow{Name: "张三", Active: true, Joined: joined},
-		fixture.TimeBoolRow{Name: "李四", Active: false, Joined: joined},
-	)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "time_bool.xlsx")
 	defer wb.Close()
 
-	rows, res, err := excelizex.Read[fixture.TimeBoolRow](wb.Sheet(fixture.SheetStudentImport)).
+	rows, res, err := excelizex.Read[fixture.TimeBoolRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {

@@ -7,23 +7,26 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestMissingColumnAndBadType(t *testing.T) {
-	buf := fixture.BuildMissingColumnFile(t)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_missing_column.xlsx")
 	defer wb.Close()
 
-	_, _, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet("Sheet1")).
+	// 缺列在绑定阶段失败，Validate 尚未执行。
+	_, _, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet("Sheet1").
+		WithLayout(layout.NoticeHeaderData{})).
 		Collect(context.Background())
 	if err == nil {
 		t.Fatal("expected missing column error")
 	}
 
-	buf2 := fixture.BuildDirtyNoticeImport(t, [][]string{{"张三", "", "not-int", "A"}})
-	wb2 := fixture.OpenBytes(t, buf2)
+	wb2 := fixture.OpenTestdata(t, "students_notice_bad_type.xlsx")
 	defer wb2.Close()
-	_, res, err := excelizex.Read[fixture.StudentImportRow](wb2.Sheet(fixture.SheetStudentImport)).
+	// 年龄列类型转换失败，在 Validate 之前即记入 Result。
+	_, res, err := excelizex.Read[fixture.StudentImportRow](wb2.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
 		Collect(context.Background())
 	if err != nil {

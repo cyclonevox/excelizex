@@ -3,6 +3,7 @@ package fixture
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"testing"
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
@@ -15,6 +16,19 @@ func OpenBytes(t *testing.T, buf *bytes.Buffer) *excelizex.Workbook {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	return wb
+}
+
+// OpenTestdata 打开 e2e/testdata/ 下已提交的 .xlsx 夹具。
+func OpenTestdata(t *testing.T, name string) *excelizex.Workbook {
+	t.Helper()
+	path, err := filepath.Abs(TestdataPath(name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wb, closeFn := OpenPath(t, path)
+	t.Cleanup(closeFn)
 
 	return wb
 }

@@ -60,7 +60,7 @@ v2 的原则很简单：**业务代码仍然短；底层分层清楚；类型在
 | 错误 | 常 panic | 常规路径返回 `error` |
 | 并发读 | ants 池 + `Run` | `Each` / `EachMap` + `Concurrency(n)`；Workbook 内对 excelize 串行化 |
 | 失败行 | 支持回写 | `Result` + `WriteErrors` 保留产品能力 |
-| 测试 | 偏演示、偏薄 | 子包单测 + `e2e/` 业务场景（运行时造表，不靠提交 xlsx） |
+| 测试 | 偏演示、偏薄 | 子包单测 + `e2e/` 业务场景（提交 `e2e/testdata/*.xlsx` 夹具 + 少量运行时造表） |
 
 **体感上你最该注意到的提升：**
 
@@ -297,13 +297,23 @@ type Row struct {
 
 ## 示例与测试
 
+- 可运行示例：[`examples/`](examples/)（`go build ./examples/...`，各子目录 `go run .`）
 - 短示例：[`example_test.go`](example_test.go)（`go test -run Example`）
-- 业务向 E2E：[`e2e/`](e2e/)——批量导入、部分失败回写、乱表头、模板下发、取消、FailFast 等；表在测试里现场生成，不提交二进制 xlsx
+- 业务向 E2E：[`e2e/`](e2e/)——批量导入、部分失败回写、乱表头、模板下发、取消、FailFast 等；静态表在 [`e2e/testdata/`](e2e/testdata/)，用 `fixture.OpenTestdata` 打开；动态行数 / 写后读等场景仍在测试里现场生成
 
 ```bash
 cd v2
 go test ./... -count=1
 go test ./... -count=1 -race
+```
+
+重新生成已提交的 `.xlsx` 夹具（改表结构或 DTO 后）：
+
+```bash
+cd v2
+go test ./e2e/testdata -run TestRewriteFixtures -rewrite -count=1
+# 或
+EXCELIZEX_REWRITE_FIXTURES=1 go test ./e2e/testdata -run TestRewriteFixtures -count=1
 ```
 
 ---

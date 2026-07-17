@@ -11,6 +11,7 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestCancelImportDuringEach(t *testing.T) {
@@ -30,8 +31,10 @@ func TestCancelImportDuringEach(t *testing.T) {
 		cancel()
 	}()
 
-	_, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	_, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
+		Validate(fixture.StructValidator()).
 		Each(ctx, func(ctx excelizex.Context, row fixture.StudentImportRow) error {
 			processed.Add(1)
 			time.Sleep(5 * time.Millisecond)
@@ -47,18 +50,16 @@ func TestCancelImportDuringEach(t *testing.T) {
 }
 
 func TestCancelImportDuringCollect(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "110101199001011234", "18", "A"},
-		{"李四", "110101199002021234", "20", "B"},
-	})
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_ok.xlsx")
 	defer wb.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
+		Validate(fixture.StructValidator()).
 		Collect(ctx)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err: %v", err)

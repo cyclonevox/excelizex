@@ -17,6 +17,7 @@ const (
 )
 
 // BuildDirtyNoticeImport 用 excelize 模拟用户上传的「脏」导入表（提示行 + 表头 + 数据）。
+// 静态场景请用 OpenTestdata；本函数保留给动态行数或改写后重导等测试。
 func BuildDirtyNoticeImport(t *testing.T, dataRows [][]string) *bytes.Buffer {
 	t.Helper()
 	f := excelize.NewFile()
@@ -40,7 +41,7 @@ func BuildDirtyNoticeImport(t *testing.T, dataRows [][]string) *bytes.Buffer {
 	return &buf
 }
 
-// BuildReorderedHeadersFile 用户拖乱表头并多加无关列、备注列。
+// BuildReorderedHeadersFile 用户拖乱表头并多加无关列、备注列。静态场景请用 OpenTestdata("students_reordered.xlsx")。
 func BuildReorderedHeadersFile(t *testing.T) *bytes.Buffer {
 	t.Helper()
 	f := excelize.NewFile()
@@ -58,7 +59,7 @@ func BuildReorderedHeadersFile(t *testing.T) *bytes.Buffer {
 	return &buf
 }
 
-// BuildMissingColumnFile 缺列场景：只有姓名列。
+// BuildMissingColumnFile 缺列场景：只有姓名列。静态场景请用 OpenTestdata("students_missing_column.xlsx")。
 func BuildMissingColumnFile(t *testing.T) *bytes.Buffer {
 	t.Helper()
 	f := excelize.NewFile()
@@ -72,7 +73,7 @@ func BuildMissingColumnFile(t *testing.T) *bytes.Buffer {
 	return &buf
 }
 
-// BuildInlineAddressFile 嵌套 inline 地址导入表。
+// BuildInlineAddressFile 嵌套 inline 地址导入表。静态场景请用 OpenTestdata("inline_address.xlsx")。
 func BuildInlineAddressFile(t *testing.T) *bytes.Buffer {
 	t.Helper()
 	f := excelize.NewFile()
@@ -90,7 +91,7 @@ func BuildInlineAddressFile(t *testing.T) *bytes.Buffer {
 	return &buf
 }
 
-// BuildDirtyEmptyRowsFile 数据区中间夹空行。
+// BuildDirtyEmptyRowsFile 数据区中间夹空行。静态场景请用 OpenTestdata("students_empty_rows.xlsx")。
 func BuildDirtyEmptyRowsFile(t *testing.T) *bytes.Buffer {
 	t.Helper()
 	f := excelize.NewFile()
@@ -229,14 +230,14 @@ func legacyHeaderStudents() *bytes.Buffer {
 	return &buf
 }
 
-// BuildLegacyNoticeStudents 运行时生成原 students_notice.xlsx 等价表。
+// BuildLegacyNoticeStudents 原 students_notice.xlsx 等价表。静态场景请用 OpenTestdata("students_notice_legacy.xlsx")。
 func BuildLegacyNoticeStudents(t *testing.T) *bytes.Buffer {
 	t.Helper()
 
 	return legacyNoticeStudents()
 }
 
-// BuildLegacyHeaderStudents 运行时生成原 students_header.xlsx 等价表。
+// BuildLegacyHeaderStudents 原 students_header.xlsx 等价表。静态场景请用 OpenTestdata("students_header_legacy.xlsx")。
 func BuildLegacyHeaderStudents(t *testing.T) *bytes.Buffer {
 	t.Helper()
 

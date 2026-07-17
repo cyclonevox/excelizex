@@ -7,15 +7,17 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestDirtyEmptyRowsSkipped(t *testing.T) {
-	buf := fixture.BuildDirtyEmptyRowsFile(t)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_empty_rows.xlsx")
 	defer wb.Close()
 
-	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
+		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)
