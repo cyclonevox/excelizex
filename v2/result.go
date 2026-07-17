@@ -84,6 +84,12 @@ func (wb *Workbook) WriteErrors(res *Result) error {
 	if res == nil || !res.HasErrors() {
 		return nil
 	}
+	wb.mu.Lock()
+	defer wb.mu.Unlock()
+	if wb.f == nil {
+		return fmt.Errorf("workbook: closed")
+	}
+
 	sheet := res.SheetName
 	rows, err := wb.f.GetRows(sheet)
 	if err != nil {

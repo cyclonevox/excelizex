@@ -1,0 +1,4 @@
+/vendor/
+/.vendor_removed/
+/.test-modcache/
+.gomodcache/

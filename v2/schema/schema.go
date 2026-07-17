@@ -48,14 +48,3 @@ func (s Schema) ColumnByHeader(header string) (Column, bool) {
 	return Column{}, false
 }
 
-// RequiredHeaders returns headers tagged with validate:"required".
-func (s Schema) RequiredHeaders() []string {
-	var out []string
-	for _, c := range s.Columns {
-		if c.Validate == "required" {
-			out = append(out, c.Header)
-		}
-	}
-
-	return out
-}

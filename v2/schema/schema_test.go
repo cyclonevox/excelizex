@@ -54,8 +54,9 @@ func TestParseIgnoreAndNotice(t *testing.T) {
 	if sc.Notice != "Notice" {
 		t.Fatalf("notice field name: %q", sc.Notice)
 	}
-	if got := sc.RequiredHeaders(); len(got) != 1 || got[0] != "姓名" {
-		t.Fatalf("required headers: %v", got)
+	col, ok := sc.ColumnByHeader("姓名")
+	if !ok || col.Validate != "required" {
+		t.Fatalf("validate tag metadata: %+v", col)
 	}
 }
 

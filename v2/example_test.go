@@ -1,13 +1,13 @@
 package excelizex_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"os"
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/layout"
-	"github.com/cyclonevox/excelizex/v2/validate"
+	playvalidator "github.com/go-playground/validator/v10"
 )
 
 // StudentRow is a typical import DTO.
@@ -17,36 +17,77 @@ type StudentRow struct {
 	Grade int    `excel:"等级" conv:"grade"`
 }
 
-// Example demonstrates a short business import flow (~20 lines).
+func exampleGradeExport(v any) (string, error) {
+	switch n := v.(type) {
+	case int:
+		switch n {
+		case 1:
+			return "A", nil
+		case 2:
+			return "B", nil
+		}
+	}
+
+	return "", fmt.Errorf("bad grade")
+}
+
+func exampleGradeImport(raw string) (any, error) {
+	switch raw {
+	case "A":
+		return 1, nil
+	case "B":
+		return 2, nil
+	default:
+		return 0, fmt.Errorf("unknown grade %q", raw)
+	}
+}
+
+type examplePlaygroundValidator struct {
+	v *playvalidator.Validate
+}
+
+func newExamplePlaygroundValidator() examplePlaygroundValidator {
+	return examplePlaygroundValidator{v: playvalidator.New()}
+}
+
+func (p examplePlaygroundValidator) Validate(row any) error {
+	return p.v.Struct(row)
+}
+
+// ExampleRead demonstrates Write → buffer → Open → Read (no committed xlsx).
 func ExampleRead() {
-	f, err := os.Open("testdata/students_notice.xlsx")
+	wb := excelizex.New()
+	defer wb.Close()
+	if err := excelizex.Write[StudentRow](wb.Sheet("考生导入").
+		WithLayout(layout.NoticeHeaderData{}).
+		WithNotice("请按模板填写考生信息")).
+		Convert("grade", exampleGradeExport).
+		Rows(StudentRow{Name: "张三", Age: 18, Grade: 1}).
+		Apply(); err != nil {
+		fmt.Println("write:", err)
+
+		return
+	}
+	// 模拟用户继续填写一行非法年龄
+	_ = wb.File().SetSheetRow("考生导入", "A4", &[]string{"李四", "bad", "B"})
+
+	var buf bytes.Buffer
+	if err := wb.Save(&buf); err != nil {
+		fmt.Println("save:", err)
+
+		return
+	}
+	wb2, err := excelizex.Open(&buf)
 	if err != nil {
 		fmt.Println("open:", err)
 
 		return
 	}
-	defer f.Close()
+	defer wb2.Close()
 
-	wb, err := excelizex.Open(f)
-	if err != nil {
-		fmt.Println("workbook:", err)
-
-		return
-	}
-	defer wb.Close()
-
-	rows, res, err := excelizex.Read[StudentRow](wb.Sheet("考生导入").WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", func(raw string) (any, error) {
-			switch raw {
-			case "A":
-				return 1, nil
-			case "B":
-				return 2, nil
-			default:
-				return 0, fmt.Errorf("unknown grade %q", raw)
-			}
-		}).
-		Validate(validate.Required{}).
+	rows, res, err := excelizex.Read[StudentRow](wb2.Sheet("考生导入").WithLayout(layout.NoticeHeaderData{})).
+		Convert("grade", exampleGradeImport).
+		Validate(newExamplePlaygroundValidator()).
 		Collect(context.Background())
 	if err != nil {
 		fmt.Println("read:", err)
@@ -66,20 +107,14 @@ func ExampleRead() {
 // ExampleWrite demonstrates template generation and data export.
 func ExampleWrite() {
 	wb := excelizex.New()
+	if wb != nil {
+		defer wb.Close()
+	}
 	rows := []StudentRow{{Name: "张三", Age: 18, Grade: 1}}
 	if err := excelizex.Write[StudentRow](wb.Sheet("考生导入").
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice("请填写考生信息")).
-		Convert("grade", func(v any) (string, error) {
-			switch n := v.(type) {
-			case int:
-				if n == 1 {
-					return "A", nil
-				}
-			}
-
-			return "", fmt.Errorf("bad grade")
-		}).
+		Convert("grade", exampleGradeExport).
 		Dropdown("等级", []string{"A", "B"}).
 		Rows(rows...).
 		Apply(); err != nil {

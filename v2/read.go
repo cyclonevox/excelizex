@@ -10,15 +10,23 @@ import (
 	"github.com/cyclonevox/excelizex/v2/convert"
 	"github.com/cyclonevox/excelizex/v2/layout"
 	"github.com/cyclonevox/excelizex/v2/schema"
-	"github.com/cyclonevox/excelizex/v2/validate"
 	"golang.org/x/sync/errgroup"
 )
+
+// Validator validates a bound row before Collect/Each invokes the business callback.
+// The library does not interpret validate struct tags; wire your project's validator here.
+//
+// Row is passed by pointer (&row) so validators using Struct() (e.g. playground/validator)
+// can set fields on the bound value.
+type Validator interface {
+	Validate(row any) error
+}
 
 // ReadBuilder configures and executes a typed read pipeline.
 type ReadBuilder[T any] struct {
 	sheet       *Sheet
 	converters  convert.Registry
-	validators  []validate.Validator
+	validators  []Validator
 	concurrency int
 	failFast    bool
 }
@@ -34,7 +42,7 @@ func (r *ReadBuilder[T]) Convert(name string, fn convert.ConvertFunc) *ReadBuild
 }
 
 // Validate adds row validators.
-func (r *ReadBuilder[T]) Validate(v ...validate.Validator) *ReadBuilder[T] {
+func (r *ReadBuilder[T]) Validate(v ...Validator) *ReadBuilder[T] {
 	r.validators = append(r.validators, v...)
 
 	return r
@@ -50,7 +58,7 @@ func (r *ReadBuilder[T]) Collect(ctx context.Context) ([]T, *Result, error) {
 	if lyt == nil {
 		lyt = layout.NoticeHeaderData{}
 	}
-	rows, err := r.sheet.wb.f.GetRows(r.sheet.name)
+	rows, err := r.sheet.wb.getRowsLocked(r.sheet.name)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read: get rows: %w", err)
 	}
@@ -76,6 +84,9 @@ func (r *ReadBuilder[T]) Collect(ctx context.Context) ([]T, *Result, error) {
 	dataStart := lyt.DataStartRow()
 	var out []T
 	for i := dataStart - 1; i < len(rows); i++ {
+		if err := ctx.Err(); err != nil {
+			return out, res, err
+		}
 		cells := rows[i]
 		if isEmptyRow(cells) {
 			continue
@@ -90,7 +101,7 @@ func (r *ReadBuilder[T]) Collect(ctx context.Context) ([]T, *Result, error) {
 			continue
 		}
 		for _, v := range r.validators {
-			if err := v.ValidateRow(row); err != nil {
+			if err := v.Validate(&row); err != nil {
 				res.addError(rowNum, cells, err.Error())
 				if r.failFast {
 					return out, res, err
@@ -125,7 +136,7 @@ func (r *ReadBuilder[T]) Each(ctx context.Context, fn func(Context, T) error, op
 		lyt = layout.NoticeHeaderData{}
 	}
 
-	rows, err := r.sheet.wb.f.GetRows(r.sheet.name)
+	rows, err := r.sheet.wb.getRowsLocked(r.sheet.name)
 	if err != nil {
 		return nil, fmt.Errorf("read: get rows: %w", err)
 	}
@@ -195,7 +206,7 @@ func (r *ReadBuilder[T]) Each(ctx context.Context, fn func(Context, T) error, op
 				return nil
 			}
 			for _, v := range r.validators {
-				if err := v.ValidateRow(row); err != nil {
+				if err := v.Validate(&row); err != nil {
 					mu.Lock()
 					res.addError(j.rowNum, j.cells, err.Error())
 					mu.Unlock()
@@ -256,7 +267,7 @@ func (r *ReadBuilder[T]) checkNotice(rows [][]string, lyt layout.Layout, sc sche
 		return nil
 	}
 	if noticeRow < 1 || noticeRow > len(rows) {
-		if sc.Notice != "" || r.sheet.notice != "" {
+		if r.sheet.notice != "" {
 			return fmt.Errorf("read: missing notice row")
 		}
 
@@ -264,13 +275,6 @@ func (r *ReadBuilder[T]) checkNotice(rows [][]string, lyt layout.Layout, sc sche
 	}
 	text := strings.TrimSpace(joinRow(rows[noticeRow-1]))
 	res.setNotice(text)
-	expected := r.sheet.notice
-	if expected == "" {
-		expected = sc.Notice
-	}
-	if expected != "" && text != expected && sc.Notice == "" {
-		// Notice field tag stores field name, not text; only enforce WithNotice or literal Schema.Notice value set via API.
-	}
 	if r.sheet.notice != "" && text != r.sheet.notice {
 		return fmt.Errorf("read: notice mismatch: got %q want %q", text, r.sheet.notice)
 	}

@@ -74,6 +74,12 @@ func (w *WriteBuilder[T]) Protect(password string) *WriteBuilder[T] {
 
 // Apply writes the sheet content (template and/or rows).
 func (w *WriteBuilder[T]) Apply() error {
+	w.sheet.wb.mu.Lock()
+	defer w.sheet.wb.mu.Unlock()
+	if w.sheet.wb.f == nil {
+		return fmt.Errorf("workbook: closed")
+	}
+
 	sc, err := w.schemaForWrite()
 	if err != nil {
 		return err
@@ -91,7 +97,11 @@ func (w *WriteBuilder[T]) Apply() error {
 
 	noticeText := w.sheet.notice
 	if noticeText == "" && len(w.rows) > 0 {
-		noticeText, _ = noticeFromRow(sc, w.rows[0])
+		var err error
+		noticeText, err = noticeFromRow(sc, w.rows[0])
+		if err != nil {
+			return fmt.Errorf("write: notice: %w", err)
+		}
 	}
 
 	if err := writeNotice(w.sheet.wb, w.sheet.name, lyt, noticeText); err != nil {
@@ -206,7 +216,9 @@ func writeNotice(wb *Workbook, sheet string, lyt layout.Layout, text string) err
 	}
 	if wb.styles != nil {
 		if id, err := wb.styles.Resolve("notice"); err == nil {
-			_ = wb.f.SetCellStyle(sheet, addr, addr, id)
+			if err := wb.f.SetCellStyle(sheet, addr, addr, id); err != nil {
+				return fmt.Errorf("write: notice style: %w", err)
+			}
 		}
 	}
 
@@ -295,7 +307,11 @@ func applyDropdowns(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Sch
 		return nil
 	}
 	optionsSheet := sheet + optionsSheetSuffix
-	if idx, _ := wb.f.GetSheetIndex(optionsSheet); idx == -1 {
+	idx, err := wb.f.GetSheetIndex(optionsSheet)
+	if err != nil {
+		return fmt.Errorf("write: options sheet index: %w", err)
+	}
+	if idx == -1 {
 		if _, err := wb.f.NewSheet(optionsSheet); err != nil {
 			return fmt.Errorf("write: options sheet: %w", err)
 		}
