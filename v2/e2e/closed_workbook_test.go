@@ -12,13 +12,10 @@ import (
 )
 
 func TestClosedWorkbookOperations(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "", "18", "A"},
-		{"", "", "19", "A"},
-	})
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_partial_fail.xlsx")
 
-	_, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	_, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
@@ -32,8 +29,10 @@ func TestClosedWorkbookOperations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err = excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	_, _, err = excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
+		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err == nil {
 		t.Fatal("Collect after Close: expected error")
@@ -42,8 +41,10 @@ func TestClosedWorkbookOperations(t *testing.T) {
 		t.Fatalf("Collect after Close: got %v", err)
 	}
 
-	_, err = excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	_, err = excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
+		Validate(fixture.StructValidator()).
 		Each(context.Background(), func(ctx excelizex.Context, row fixture.StudentImportRow) error {
 			return nil
 		})

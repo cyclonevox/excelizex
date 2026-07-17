@@ -7,6 +7,7 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestTemplateDistributeFillRead(t *testing.T) {
@@ -31,7 +32,8 @@ func TestTemplateDistributeFillRead(t *testing.T) {
 		{"李四", "B"},
 	})
 
-	rows, res, err := excelizex.Read[fixture.TemplateDistributeRow](wb.Sheet(fixture.SheetStudentImport)).
+	rows, res, err := excelizex.Read[fixture.TemplateDistributeRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {

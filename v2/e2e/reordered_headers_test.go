@@ -7,14 +7,16 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestReorderedHeadersWithExtraColumn(t *testing.T) {
-	buf := fixture.BuildReorderedHeadersFile(t)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_reordered.xlsx")
 	defer wb.Close()
 
-	rows, res, err := excelizex.Read[fixture.ReorderedRow](wb.Sheet(fixture.SheetStudentImport)).
+	// 夹具 notice 文案与 NoticeFillStudents 不同，仅显式 WithLayout。
+	rows, res, err := excelizex.Read[fixture.ReorderedRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())

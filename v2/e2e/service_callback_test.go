@@ -9,6 +9,7 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 type fakeImportSvc struct {
@@ -35,17 +36,12 @@ func (s *fakeImportSvc) callCount() int {
 }
 
 func TestServiceCallbackImportStyle(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "", "18", "A"},
-		{"李四", "", "20", "B"},
-		{"重复考生", "", "21", "A"},
-		{"王五", "", "22", "B"},
-	})
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_service_callback.xlsx")
 	defer wb.Close()
 
 	svc := &fakeImportSvc{}
-	res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Each(context.Background(), func(ctx excelizex.Context, row fixture.StudentImportRow) error {

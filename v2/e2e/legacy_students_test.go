@@ -11,8 +11,7 @@ import (
 )
 
 func TestLegacyNoticeStudentsImport(t *testing.T) {
-	buf := fixture.BuildLegacyNoticeStudents(t)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_legacy.xlsx")
 	defer wb.Close()
 
 	rows, res, err := excelizex.Read[fixture.LegacyStudentRow](wb.Sheet(fixture.SheetStudentImport).
@@ -32,13 +31,13 @@ func TestLegacyNoticeStudentsImport(t *testing.T) {
 }
 
 func TestLegacyHeaderStudentsImport(t *testing.T) {
-	buf := fixture.BuildLegacyHeaderStudents(t)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_header_legacy.xlsx")
 	defer wb.Close()
 
 	rows, res, err := excelizex.Read[fixture.LegacyStudentRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.HeaderData{})).
 		Convert("grade", fixture.GradeImport).
+		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)

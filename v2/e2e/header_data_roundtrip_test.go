@@ -11,11 +11,7 @@ import (
 )
 
 func TestHeaderDataExportReimport(t *testing.T) {
-	buf := fixture.WriteHeaderDataScores(t,
-		fixture.ScoreRow{Name: "李四", Score: 95},
-		fixture.ScoreRow{Name: "王五", Score: 88},
-	)
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "scores_header.xlsx")
 	defer wb.Close()
 
 	rows, res, err := excelizex.Read[fixture.ScoreRow](wb.Sheet("成绩").WithLayout(layout.HeaderData{})).

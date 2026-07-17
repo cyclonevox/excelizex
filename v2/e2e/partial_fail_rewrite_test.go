@@ -7,18 +7,14 @@ import (
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/e2e/fixture"
+	"github.com/cyclonevox/excelizex/v2/layout"
 )
 
 func TestPartialFailRewriteAndReimport(t *testing.T) {
-	buf := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "110101199001011234", "18", "A"},
-		{"", "110101199002021234", "19", "A"},
-		{"王五", "110101199003031234", "bad", "A"},
-		{"赵六", "110101199004041234", "22", "Z"},
-	})
-	wb := fixture.OpenBytes(t, buf)
+	wb := fixture.OpenTestdata(t, "students_notice_partial_fail.xlsx")
 
-	_, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport)).
+	_, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
@@ -36,7 +32,8 @@ func TestPartialFailRewriteAndReimport(t *testing.T) {
 	wb2 := fixture.OpenBytes(t, out)
 	defer wb2.Close()
 
-	rows, res2, err := excelizex.Read[fixture.StudentImportRow](wb2.Sheet(fixture.SheetStudentImport)).
+	rows, res2, err := excelizex.Read[fixture.StudentImportRow](wb2.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
@@ -61,14 +58,11 @@ func TestPartialFailRewriteAndReimport(t *testing.T) {
 		t.Fatalf("error column header: %q", lastHeader)
 	}
 
-	// 业务方修正失败行后重新导入
-	fixed := fixture.BuildDirtyNoticeImport(t, [][]string{
-		{"张三", "110101199001011234", "18", "A"},
-		{"钱七", "110101199005051234", "21", "B"},
-	})
-	wb3 := fixture.OpenBytes(t, fixed)
+	// 业务方修正失败行后重新导入（已提交夹具 students_notice_fixed.xlsx）
+	wb3 := fixture.OpenTestdata(t, "students_notice_fixed.xlsx")
 	defer wb3.Close()
-	rows3, res3, err := excelizex.Read[fixture.StudentImportRow](wb3.Sheet(fixture.SheetStudentImport)).
+	rows3, res3, err := excelizex.Read[fixture.StudentImportRow](wb3.Sheet(fixture.SheetStudentImport).
+		WithLayout(layout.NoticeHeaderData{})).
 		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
