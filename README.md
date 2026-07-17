@@ -1,6 +1,7 @@
 ## Excelizex 只是一个简单的excel库
 
-> **v2 开发中**：根目录为 v1（功能冻结，仅维护）。新版 API 见 [`./v2`](v2/README.md)（`github.com/cyclonevox/excelizex/v2`）。
+> **v2 在 [`./v2`](v2/README.md)**（模块 `github.com/cyclonevox/excelizex/v2`）：泛型 `Read[T]`/`Write[T]`、Schema 与 Layout 分离、可插拔校验。  
+> 文档里写了 **相对 v1 改了什么、提升了什么、功能路线**。根目录本文是 **v1**（功能冻结，仅维护；API 不跟 v2 兼容）。
 
 中文| [English](README_ENG.md)
 
@@ -13,6 +14,8 @@ Excelizex目标就是在使用golang导入excel时，使开发者调用更加方
 
 鉴于时间和精力以及个人能力，目前只提供了 [提示信息行 - 表头行 - 数据行] excel模板，
 非常希望大家能够提出改进建议或者是直接提交代码。
+
+新项目或新导入表请优先看 [v2 README](v2/README.md)。下面是 v1 的说明与计划。
 
 [现状及目前计划](#目前计划或者已提供的功能有)
 
