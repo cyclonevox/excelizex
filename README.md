@@ -1,5 +1,7 @@
 ## Excelizex 只是一个简单的excel库
 
+> **v2 开发中**：根目录为 v1（功能冻结，仅维护）。新版 API 见 [`./v2`](v2/README.md)（`github.com/cyclonevox/excelizex/v2`）。
+
 中文| [English](README_ENG.md)
 
 Excelizex目标就是在使用golang导入excel时，使开发者调用更加方便,更简单。
