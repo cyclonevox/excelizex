@@ -119,9 +119,7 @@ func (r *ReadBuilder[T]) Collect(ctx context.Context) ([]T, *Result, error) {
 // Each invokes fn for each successfully bound and validated row.
 func (r *ReadBuilder[T]) Each(ctx context.Context, fn func(Context, T) error, opts ...EachOption) (*Result, error) {
 	cfg := applyReadOptions(opts)
-	if cfg.concurrency == 1 && r.concurrency > 1 {
-		cfg.concurrency = r.concurrency
-	}
+	cfg.concurrency = resolveConcurrency(cfg, r.concurrency)
 	if r.failFast {
 		cfg.failFast = true
 	}
@@ -179,14 +177,10 @@ func (r *ReadBuilder[T]) Each(ctx context.Context, fn func(Context, T) error, op
 		jobs = append(jobs, job{rowNum: i + 1, cells: cells})
 	}
 
-	var (
-		mu sync.Mutex
-		eg *errgroup.Group
-	)
+	var mu sync.Mutex
 	eg, egCtx := errgroup.WithContext(ctx)
-	if cfg.concurrency > 1 {
-		eg.SetLimit(cfg.concurrency)
-	}
+	// Always set a limit: errgroup's zero value is unlimited concurrency.
+	eg.SetLimit(cfg.concurrency)
 
 	for _, j := range jobs {
 		j := j

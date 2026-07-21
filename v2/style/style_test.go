@@ -20,6 +20,47 @@ func TestAppendMerge(t *testing.T) {
 	}
 }
 
+func TestAppendDeepMergeKeepsFill(t *testing.T) {
+	a := style.New("body-blue", &excelize.Style{
+		NumFmt: 49,
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Pattern: 1,
+			Color:   []string{"#DAEEF3"},
+		},
+		Protection: &excelize.Protection{Locked: false},
+	})
+	b := style.New("locked", &excelize.Style{Protection: &excelize.Protection{Locked: true}})
+	es := a.Append(b).ExcelStyle()
+	if es.Fill.Type != "pattern" || len(es.Fill.Color) == 0 || es.Fill.Color[0] != "#DAEEF3" {
+		t.Fatalf("fill lost: %+v", es.Fill)
+	}
+	if es.NumFmt != 49 {
+		t.Fatalf("numfmt lost: %d", es.NumFmt)
+	}
+	if es.Protection == nil || !es.Protection.Locked {
+		t.Fatalf("protection: %+v", es.Protection)
+	}
+}
+
+func TestRegisterInvalidatesStyleIDCache(t *testing.T) {
+	f := excelize.NewFile()
+	reg := style.NewRegistry(f)
+	_ = reg.Register(style.New("custom", &excelize.Style{NumFmt: 1}))
+	id1, err := reg.Resolve("custom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = reg.Register(style.New("custom", &excelize.Style{NumFmt: 49}))
+	id2, err := reg.Resolve("custom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id1 == id2 {
+		t.Fatal("expected style id cache invalidation after re-register")
+	}
+}
+
 func TestRegistryResolveAppend(t *testing.T) {
 	f := excelize.NewFile()
 	reg := style.NewRegistry(f)

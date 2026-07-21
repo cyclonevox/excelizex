@@ -48,3 +48,17 @@ func TestResolveHeaders(t *testing.T) {
 		t.Fatal("empty header should be skipped")
 	}
 }
+
+func TestRenderHeaders(t *testing.T) {
+	rows, err := layout.HeaderData{}.RenderHeaders([]string{"姓名", "年龄"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0][0] != "姓名" || rows[0][1] != "年龄" {
+		t.Fatalf("render: %v", rows)
+	}
+	rows, err = layout.NoticeHeaderData{}.RenderHeaders([]string{"A"})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("notice render: %v %v", rows, err)
+	}
+}

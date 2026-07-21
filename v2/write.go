@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/cyclonevox/excelizex/v2/bind"
 	"github.com/cyclonevox/excelizex/v2/convert"
@@ -13,7 +15,10 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-const optionsSheetSuffix = "选项数据表"
+const (
+	optionsSheetSuffix = "_opts"
+	maxSheetNameLen    = 31
+)
 
 type dropdownSpec struct {
 	header  string
@@ -72,7 +77,9 @@ func (w *WriteBuilder[T]) Protect(password string) *WriteBuilder[T] {
 	return w
 }
 
-// Apply writes the sheet content (template and/or rows).
+// Apply rebuilds the sheet content (template and/or rows).
+// It replaces the target sheet: previous data rows, notice text, data validations,
+// and companion options sheets from earlier Apply calls are cleared first.
 func (w *WriteBuilder[T]) Apply() error {
 	w.sheet.wb.mu.Lock()
 	defer w.sheet.wb.mu.Unlock()
@@ -92,6 +99,9 @@ func (w *WriteBuilder[T]) Apply() error {
 		return err
 	}
 	if err := cleanupDefaultSheet(w.sheet.wb, w.sheet.name); err != nil {
+		return err
+	}
+	if err := resetSheetForApply(w.sheet.wb, w.sheet.name, len(w.dropdowns) > 0); err != nil {
 		return err
 	}
 
@@ -165,8 +175,10 @@ func ensureSheet(wb *Workbook, name string) error {
 	return nil
 }
 
+// cleanupDefaultSheet removes excelize's blank Sheet1 only for workbooks created
+// by New(), and only when Sheet1 is still empty. Open() workbooks never auto-delete.
 func cleanupDefaultSheet(wb *Workbook, name string) error {
-	if name == "Sheet1" {
+	if !wb.createdNew || name == "Sheet1" {
 		return nil
 	}
 	idx, err := wb.f.GetSheetIndex("Sheet1")
@@ -176,8 +188,87 @@ func cleanupDefaultSheet(wb *Workbook, name string) error {
 	if idx == -1 {
 		return nil
 	}
+	rows, err := wb.f.GetRows("Sheet1")
+	if err != nil {
+		return err
+	}
+	if !sheetRowsEmpty(rows) {
+		return nil
+	}
 
 	return wb.f.DeleteSheet("Sheet1")
+}
+
+func resetSheetForApply(wb *Workbook, sheet string, keepOptionsSheet bool) error {
+	_ = wb.f.UnprotectSheet(sheet)
+	if err := wb.f.DeleteDataValidation(sheet); err != nil {
+		return fmt.Errorf("write: clear validations: %w", err)
+	}
+	if err := clearSheetRows(wb, sheet); err != nil {
+		return err
+	}
+
+	return resetOptionsSheet(wb, sheet, keepOptionsSheet)
+}
+
+func clearSheetRows(wb *Workbook, sheet string) error {
+	rows, err := wb.f.GetRows(sheet)
+	if err != nil {
+		return fmt.Errorf("write: get rows: %w", err)
+	}
+	for row := len(rows); row >= 1; row-- {
+		if err := wb.f.RemoveRow(sheet, row); err != nil {
+			return fmt.Errorf("write: clear row %d: %w", row, err)
+		}
+	}
+
+	return nil
+}
+
+func resetOptionsSheet(wb *Workbook, sheet string, keep bool) error {
+	name := optionsSheetName(sheet)
+	idx, err := wb.f.GetSheetIndex(name)
+	if err != nil {
+		return fmt.Errorf("write: options sheet index: %w", err)
+	}
+	if idx == -1 {
+		return nil
+	}
+	if !keep {
+		return wb.f.DeleteSheet(name)
+	}
+
+	return clearSheetRows(wb, name)
+}
+
+func sheetRowsEmpty(rows [][]string) bool {
+	for _, row := range rows {
+		for _, c := range row {
+			if strings.TrimSpace(c) != "" {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func optionsSheetName(sheet string) string {
+	suffixRunes := utf8.RuneCountInString(optionsSheetSuffix)
+	maxBase := maxSheetNameLen - suffixRunes
+	if maxBase < 1 {
+		maxBase = 1
+	}
+	runes := []rune(sheet)
+	if len(runes) > maxBase {
+		runes = runes[:maxBase]
+	}
+
+	return string(runes) + optionsSheetSuffix
+}
+
+func quoteSheetForFormula(name string) string {
+	return "'" + strings.ReplaceAll(name, "'", "''") + "'"
 }
 
 func noticeFromRow[T any](sc schema.Schema, row T) (string, error) {
@@ -226,17 +317,28 @@ func writeNotice(wb *Workbook, sheet string, lyt layout.Layout, text string) err
 }
 
 func writeHeaders(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Schema) error {
-	start, _ := lyt.HeaderRows()
+	start, end := lyt.HeaderRows()
 	headers := make([]string, len(sc.Columns))
 	for i, c := range sc.Columns {
 		headers[i] = c.Header
 	}
-	addr, err := excelize.JoinCellName("A", start)
+	headerRows, err := lyt.RenderHeaders(headers)
 	if err != nil {
-		return err
+		return fmt.Errorf("write: render headers: %w", err)
 	}
-	if err := wb.f.SetSheetRow(sheet, addr, &headers); err != nil {
-		return fmt.Errorf("write: header: %w", err)
+	wantRows := end - start + 1
+	if len(headerRows) != wantRows {
+		return fmt.Errorf("write: layout rendered %d header rows, HeaderRows expects %d", len(headerRows), wantRows)
+	}
+	for i, row := range headerRows {
+		addr, err := excelize.JoinCellName("A", start+i)
+		if err != nil {
+			return err
+		}
+		cells := append([]any(nil), row...)
+		if err := wb.f.SetSheetRow(sheet, addr, &cells); err != nil {
+			return fmt.Errorf("write: header: %w", err)
+		}
 	}
 
 	return nil
@@ -265,7 +367,7 @@ func applyStyles(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Schema
 	if wb.styles == nil {
 		return nil
 	}
-	headerRow, _ := lyt.HeaderRows()
+	headerStart, headerEnd := lyt.HeaderRows()
 	dataStart := lyt.DataStartRow()
 	endDataRow := dataStart + dataRows - 1
 	if dataRows == 0 {
@@ -276,13 +378,14 @@ func applyStyles(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Schema
 		if err != nil {
 			return err
 		}
-		headerCell := colName + strconv.Itoa(headerRow)
 		if parts := style.SplitRole(col.Style, 0); len(parts) > 0 {
 			id, err := wb.styles.Resolve(parts...)
 			if err != nil {
 				return fmt.Errorf("write: header style: %w", err)
 			}
-			if err := wb.f.SetCellStyle(sheet, headerCell, headerCell, id); err != nil {
+			top := colName + strconv.Itoa(headerStart)
+			bottom := colName + strconv.Itoa(headerEnd)
+			if err := wb.f.SetCellStyle(sheet, top, bottom, id); err != nil {
 				return fmt.Errorf("write: set header style: %w", err)
 			}
 		}
@@ -306,7 +409,7 @@ func applyDropdowns(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Sch
 	if len(specs) == 0 {
 		return nil
 	}
-	optionsSheet := sheet + optionsSheetSuffix
+	optionsSheet := optionsSheetName(sheet)
 	idx, err := wb.f.GetSheetIndex(optionsSheet)
 	if err != nil {
 		return fmt.Errorf("write: options sheet index: %w", err)
@@ -318,6 +421,9 @@ func applyDropdowns(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Sch
 	}
 	dataStart := lyt.DataStartRow()
 	for i, spec := range specs {
+		if len(spec.options) == 0 {
+			return fmt.Errorf("write: dropdown %q: empty options", spec.header)
+		}
 		colIdx := columnIndex(sc, spec.header)
 		if colIdx < 0 {
 			return fmt.Errorf("write: dropdown: unknown header %q", spec.header)
@@ -341,7 +447,7 @@ func applyDropdowns(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Sch
 		if err != nil {
 			return err
 		}
-		formula := fmt.Sprintf("%s!$A$%d:$%s$%d", optionsSheet, i+1, endCol, i+1)
+		formula := fmt.Sprintf("%s!$A$%d:$%s$%d", quoteSheetForFormula(optionsSheet), i+1, endCol, i+1)
 		dv := excelize.NewDataValidation(true)
 		dv.Sqref = fmt.Sprintf("%s%d:%s1048576", colName, dataStart, colName)
 		dv.SetSqrefDropList(formula)
