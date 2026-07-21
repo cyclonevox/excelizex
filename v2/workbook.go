@@ -1,7 +1,6 @@
 package excelizex
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"sync"
@@ -15,9 +14,27 @@ import (
 // File() returns the raw *excelize.File without locking; callers must synchronize
 // their own use of that handle.
 type Workbook struct {
-	mu     sync.Mutex
-	f      *excelize.File
-	styles *style.Registry
+	mu         sync.Mutex
+	f          *excelize.File
+	styles     *style.Registry
+	createdNew bool // true only for New(); Open() workbooks never auto-delete sheets
+}
+
+// OpenOption configures Open.
+type OpenOption func(*excelize.Options)
+
+// WithUnzipSizeLimit sets the maximum unzipped size accepted when opening a workbook.
+func WithUnzipSizeLimit(n int64) OpenOption {
+	return func(o *excelize.Options) {
+		o.UnzipSizeLimit = n
+	}
+}
+
+// WithUnzipXMLSizeLimit sets the memory limit for unzipping worksheet XML.
+func WithUnzipXMLSizeLimit(n int64) OpenOption {
+	return func(o *excelize.Options) {
+		o.UnzipXMLSizeLimit = n
+	}
 }
 
 // New creates an empty workbook. It always returns a non-nil Workbook; if built-in
@@ -25,23 +42,26 @@ type Workbook struct {
 // may be incomplete.
 func New() *Workbook {
 	f := excelize.NewFile()
-	wb := &Workbook{f: f, styles: style.NewRegistry(f)}
+	wb := &Workbook{f: f, styles: style.NewRegistry(f), createdNew: true}
 	_ = wb.styles.RegisterDefaults()
 
 	return wb
 }
 
-// Open reads a workbook from r.
-func Open(r io.Reader) (*Workbook, error) {
-	data, err := io.ReadAll(r)
+// Open reads a workbook from r. It does not buffer the whole stream before
+// handing it to excelize; pass size-limit options for untrusted uploads.
+func Open(r io.Reader, opts ...OpenOption) (*Workbook, error) {
+	var o excelize.Options
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&o)
+		}
+	}
+	f, err := excelize.OpenReader(r, o)
 	if err != nil {
 		return nil, err
 	}
-	f, err := excelize.OpenReader(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	wb := &Workbook{f: f, styles: style.NewRegistry(f)}
+	wb := &Workbook{f: f, styles: style.NewRegistry(f), createdNew: false}
 	if err := wb.styles.RegisterDefaults(); err != nil {
 		f.Close()
 

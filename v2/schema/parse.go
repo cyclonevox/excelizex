@@ -24,7 +24,8 @@ func typeOf(v any) (reflect.Type, error) {
 func walkStruct(t reflect.Type, prefix string, s *Schema) error {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
-		if !f.IsExported() && !(f.Anonymous && f.Type.Kind() == reflect.Struct) {
+		ft := derefType(f.Type)
+		if !f.IsExported() && !(f.Anonymous && ft.Kind() == reflect.Struct) {
 			continue
 		}
 		excelTag := f.Tag.Get("excel")
@@ -39,13 +40,16 @@ func walkStruct(t reflect.Type, prefix string, s *Schema) error {
 			continue
 		}
 		if shouldInline(f, excelTag) {
+			if ft.Kind() != reflect.Struct {
+				return fmt.Errorf("schema: inline field %s must be a struct (or *struct), got %s", f.Name, f.Type)
+			}
 			subPrefix := prefix
 			if !f.Anonymous {
 				subPrefix = prefix + f.Name + "."
 			} else if prefix == "" {
 				subPrefix = ""
 			}
-			if err := walkStruct(f.Type, subPrefix, s); err != nil {
+			if err := walkStruct(ft, subPrefix, s); err != nil {
 				return err
 			}
 			continue
@@ -76,8 +80,17 @@ func walkStruct(t reflect.Type, prefix string, s *Schema) error {
 	return nil
 }
 
+func derefType(t reflect.Type) reflect.Type {
+	for t != nil && t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	return t
+}
+
 func shouldInline(f reflect.StructField, excelTag string) bool {
-	if f.Anonymous && f.Type.Kind() == reflect.Struct {
+	ft := derefType(f.Type)
+	if f.Anonymous && ft.Kind() == reflect.Struct {
 		return excelTag == "" || excelTag == ",inline"
 	}
 

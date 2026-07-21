@@ -3,6 +3,7 @@ package style
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -63,12 +64,7 @@ func mergeStyles(a, b *excelize.Style) (*excelize.Style, error) {
 	if err := json.Unmarshal(bb, &bm); err != nil {
 		return nil, err
 	}
-	for k, v := range bm {
-		if v == nil {
-			continue
-		}
-		am[k] = v
-	}
+	mergeStyleMaps(am, bm)
 	out, err := json.Marshal(am)
 	if err != nil {
 		return nil, err
@@ -79,6 +75,52 @@ func mergeStyles(a, b *excelize.Style) (*excelize.Style, error) {
 	}
 
 	return merged, nil
+}
+
+// mergeStyleMaps deeply merges src into dst, skipping empty JSON values so a
+// style like "locked" (only Protection) does not wipe Fill/Font/NumFmt from the base.
+func mergeStyleMaps(dst, src map[string]any) {
+	for k, v := range src {
+		if isEmptyJSONValue(v) {
+			continue
+		}
+		if dm, ok := dst[k].(map[string]any); ok {
+			if sm, ok := v.(map[string]any); ok {
+				mergeStyleMaps(dm, sm)
+				continue
+			}
+		}
+		dst[k] = v
+	}
+}
+
+func isEmptyJSONValue(v any) bool {
+	switch x := v.(type) {
+	case nil:
+		return true
+	case bool:
+		// Keep false: Protection.Locked=false is intentional.
+		return false
+	case float64:
+		return x == 0
+	case string:
+		return x == ""
+	case []any:
+		return len(x) == 0
+	case map[string]any:
+		if len(x) == 0 {
+			return true
+		}
+		for _, vv := range x {
+			if !isEmptyJSONValue(vv) {
+				return false
+			}
+		}
+
+		return true
+	default:
+		return false
+	}
 }
 
 // Registry resolves named styles to excelize style IDs within one workbook.
@@ -102,9 +144,25 @@ func (r *Registry) Register(s Style) error {
 	if s == nil || s.Name() == "" {
 		return fmt.Errorf("style: invalid style")
 	}
-	r.defs[s.Name()] = s
+	name := s.Name()
+	r.defs[name] = s
+	for key := range r.ids {
+		if styleKeyUses(key, name) {
+			delete(r.ids, key)
+		}
+	}
 
 	return nil
+}
+
+func styleKeyUses(key, name string) bool {
+	for _, part := range strings.Split(key, "+") {
+		if part == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 // RegisterDefaults installs built-in styles used by common style tags.

@@ -6,11 +6,13 @@ import (
 )
 
 // Layout describes physical sheet layout: notice, header rows, and data start.
+// RenderHeaders must return exactly (end-start+1) rows for HeaderRows().
 type Layout interface {
 	NoticeRow() (row int, ok bool)
 	HeaderRows() (start, end int)
 	DataStartRow() int
 	ResolveHeaders(headerRows [][]string) (map[int]string, error)
+	RenderHeaders(headers []string) ([][]any, error)
 }
 
 // NoticeHeaderData: row1 notice (optional), row2 header, row3+ data.
@@ -26,6 +28,10 @@ func (NoticeHeaderData) ResolveHeaders(headerRows [][]string) (map[int]string, e
 	return singleRowHeaders(headerRows)
 }
 
+func (NoticeHeaderData) RenderHeaders(headers []string) ([][]any, error) {
+	return singleRowRender(headers)
+}
+
 // HeaderData: row1 header, row2+ data, no notice row.
 type HeaderData struct{}
 
@@ -37,6 +43,10 @@ func (HeaderData) DataStartRow() int { return 2 }
 
 func (HeaderData) ResolveHeaders(headerRows [][]string) (map[int]string, error) {
 	return singleRowHeaders(headerRows)
+}
+
+func (HeaderData) RenderHeaders(headers []string) ([][]any, error) {
+	return singleRowRender(headers)
 }
 
 func singleRowHeaders(headerRows [][]string) (map[int]string, error) {
@@ -56,4 +66,13 @@ func singleRowHeaders(headerRows [][]string) (map[int]string, error) {
 	}
 
 	return out, nil
+}
+
+func singleRowRender(headers []string) ([][]any, error) {
+	row := make([]any, len(headers))
+	for i, h := range headers {
+		row[i] = h
+	}
+
+	return [][]any{row}, nil
 }

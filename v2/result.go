@@ -2,6 +2,7 @@ package excelizex
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -61,12 +62,15 @@ func (r *Result) addError(row int, cells []string, msgs ...string) {
 	})
 }
 
-// Errors returns a copy of collected row errors.
+// Errors returns a copy of collected row errors, sorted by Excel row number.
 func (r *Result) Errors() []RowError {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]RowError, len(r.errors))
 	copy(out, r.errors)
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].Row < out[j].Row
+	})
 
 	return out
 }

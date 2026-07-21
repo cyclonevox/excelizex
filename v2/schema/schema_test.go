@@ -93,3 +93,42 @@ func TestParseAnonymousEmbed(t *testing.T) {
 		t.Fatalf("columns: %d", len(sc.Columns))
 	}
 }
+
+func TestParseAnonymousPointerEmbed(t *testing.T) {
+	type inner struct {
+		City string `excel:"城市"`
+	}
+	type row struct {
+		*inner
+		Name string `excel:"姓名"`
+	}
+	sc, err := schema.New(row{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sc.Columns) != 2 {
+		t.Fatalf("columns: %d", len(sc.Columns))
+	}
+}
+
+func TestParseDuplicateHeader(t *testing.T) {
+	type row struct {
+		A string `excel:"姓名"`
+		B string `excel:"姓名"`
+	}
+	if _, err := schema.New(row{}); err == nil {
+		t.Fatal("expected duplicate header error")
+	}
+}
+
+func TestParseNilAndNonStruct(t *testing.T) {
+	if _, err := schema.New(nil); err == nil {
+		t.Fatal("expected nil error")
+	}
+	if _, err := schema.FromType(nil); err == nil {
+		t.Fatal("expected nil type error")
+	}
+	if _, err := schema.New("x"); err == nil {
+		t.Fatal("expected non-struct error")
+	}
+}
