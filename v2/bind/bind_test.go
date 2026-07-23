@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/cyclonevox/excelizex/v2/bind"
-	"github.com/cyclonevox/excelizex/v2/convert"
 	"github.com/cyclonevox/excelizex/v2/schema"
 )
 
@@ -44,7 +43,7 @@ func TestBindRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	row, err := bind.BindRow[studentRow](m, []string{"张三", "18"}, nil)
+	row, err := bind.BindRow[studentRow](m, []string{"张三", "18"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,18 +55,61 @@ func TestBindRow(t *testing.T) {
 func TestBindRowBadNumber(t *testing.T) {
 	sc, _ := schema.New(studentRow{})
 	m, _ := bind.MatchColumns(sc, map[int]string{0: "姓名", 1: "年龄"})
-	_, err := bind.BindRow[studentRow](m, []string{"张三", "abc"}, nil)
+	_, err := bind.BindRow[studentRow](m, []string{"张三", "abc"})
 	if err == nil {
 		t.Fatal("expected convert error")
 	}
 }
 
-func TestExtraHeaders(t *testing.T) {
-	sc, _ := schema.New(studentRow{})
-	m, _ := bind.MatchColumns(sc, map[int]string{0: "姓名", 1: "年龄", 2: "备注"})
-	extra := bind.ExtraHeaders(m, map[int]string{0: "姓名", 1: "年龄", 2: "备注"}, sc)
-	if len(extra) != 1 || extra[0] != "备注" {
-		t.Fatalf("extra: %v", extra)
+func TestBindInlineNestedPath(t *testing.T) {
+	type address struct {
+		City string `excel:"城市"`
 	}
-	_ = convert.Registry{}
+	type row struct {
+		Name string  `excel:"姓名"`
+		Addr address `excel:",inline"`
+	}
+	sc, err := schema.New(row{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := bind.MatchColumns(sc, map[int]string{0: "姓名", 1: "城市"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		got, err := bind.BindRow[row](m, []string{"张三", "北京"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Name != "张三" || got.Addr.City != "北京" {
+			t.Fatalf("row: %+v", got)
+		}
+	}
 }
+
+func TestBindPointerInlineAlloc(t *testing.T) {
+	type address struct {
+		City string `excel:"城市"`
+	}
+	type row struct {
+		Name string   `excel:"姓名"`
+		Addr *address `excel:",inline"`
+	}
+	sc, err := schema.New(row{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := bind.MatchColumns(sc, map[int]string{0: "姓名", 1: "城市"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := bind.BindRow[row](m, []string{"李四", "上海"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Addr == nil || got.Addr.City != "上海" {
+		t.Fatalf("row: %+v", got)
+	}
+}
+

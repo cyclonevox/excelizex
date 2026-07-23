@@ -1,4 +1,4 @@
-// Package demo 提供 examples 共用的 DTO、转换器与 validator 适配。
+// Package demo 提供 examples 共用的 DTO、年级转换钩子与 validator 适配。
 package demo
 
 import (
@@ -18,7 +18,36 @@ type StudentRow struct {
 	Name   string `excel:"姓名" validate:"required"`
 	IDCard string `excel:"身份证"`
 	Age    int    `excel:"年龄"`
-	Grade  int    `excel:"年级" conv:"grade"`
+	Grade  int    `excel:"年级"`
+}
+
+func (r *StudentRow) ExcelGrade(raw string) error {
+	switch raw {
+	case "A":
+		r.Grade = 1
+		return nil
+	case "B":
+		r.Grade = 2
+		return nil
+	case "":
+		r.Grade = 0
+		return nil
+	default:
+		return fmt.Errorf("unknown grade %q", raw)
+	}
+}
+
+func (r *StudentRow) ExcelExportGrade() (string, error) {
+	switch r.Grade {
+	case 1:
+		return "A", nil
+	case 2:
+		return "B", nil
+	case 0:
+		return "", nil
+	default:
+		return "", fmt.Errorf("unknown grade %d", r.Grade)
+	}
 }
 
 // PlaygroundValidator 对接 go-playground/validator，与 example_test.go 同模式。
@@ -32,31 +61,4 @@ func NewPlaygroundValidator() PlaygroundValidator {
 
 func (p PlaygroundValidator) Validate(row any) error {
 	return p.v.Struct(row)
-}
-
-func GradeImport(raw string) (any, error) {
-	switch raw {
-	case "A":
-		return 1, nil
-	case "B":
-		return 2, nil
-	default:
-		return 0, fmt.Errorf("unknown grade %q", raw)
-	}
-}
-
-func GradeExport(v any) (string, error) {
-	switch n := v.(type) {
-	case int:
-		switch n {
-		case 1:
-			return "A", nil
-		case 2:
-			return "B", nil
-		default:
-			return "", fmt.Errorf("unknown grade %d", n)
-		}
-	default:
-		return "", fmt.Errorf("bad grade type")
-	}
 }

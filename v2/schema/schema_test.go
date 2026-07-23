@@ -13,7 +13,7 @@ type inlineRow struct {
 		Street string `excel:"街道"`
 	} `excel:",inline"`
 	Skipped string `excel:"-"`
-	Grade   int    `excel:"等级" conv:"grade"`
+	Grade   int    `excel:"等级"`
 }
 
 type noticeRow struct {
@@ -39,10 +39,6 @@ func TestParseBasicAndInline(t *testing.T) {
 		if c.FieldPath != want[c.Header] {
 			t.Fatalf("header %q field path %q want %q", c.Header, c.FieldPath, want[c.Header])
 		}
-	}
-	col, ok := sc.ColumnByHeader("等级")
-	if !ok || col.Convert != "grade" {
-		t.Fatalf("conv tag: %+v", col)
 	}
 }
 

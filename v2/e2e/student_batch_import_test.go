@@ -1,5 +1,5 @@
 // 业务场景：考务系统批量导入考生名单（happy path）。
-// 流程：生成导入表 → Open → Read Collect（conv + Validate hook）→ 断言成功行。
+// 流程：生成导入表 → Open → Read Collect（Validate hook）→ 断言成功行。
 package e2e_test
 
 import (
@@ -19,7 +19,6 @@ func TestStudentBatchImportHappyPath(t *testing.T) {
 	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice(fixture.NoticeFillStudents)).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
@@ -46,7 +45,6 @@ func TestStudentBatchImportEmptyName(t *testing.T) {
 	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice(fixture.NoticeFillStudents)).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {

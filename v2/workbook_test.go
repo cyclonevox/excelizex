@@ -1,4 +1,3 @@
-// 并发与互斥压测保留在此；业务场景 E2E 见 v2/e2e/。
 package excelizex_test
 
 import (
@@ -17,23 +16,25 @@ import (
 type regStressImportRow struct {
 	Name  string `excel:"姓名"`
 	Age   int    `excel:"年龄"`
-	Grade int    `excel:"等级" conv:"grade"`
+	Grade int    `excel:"等级"`
+}
+
+func (r *regStressImportRow) ExcelGrade(raw string) error {
+	switch raw {
+	case "A":
+		r.Grade = 1
+		return nil
+	case "B":
+		r.Grade = 2
+		return nil
+	default:
+		return fmt.Errorf("unknown grade %q", raw)
+	}
 }
 
 type regStressScoreRow struct {
 	Name  string `excel:"姓名"`
 	Score int    `excel:"分数"`
-}
-
-func regStressGradeImport(raw string) (any, error) {
-	switch raw {
-	case "A":
-		return 1, nil
-	case "B":
-		return 2, nil
-	default:
-		return 0, fmt.Errorf("unknown grade %q", raw)
-	}
 }
 
 func buildStressImportXLSX(t *testing.T, n int) *bytes.Buffer {
@@ -56,8 +57,46 @@ func buildStressImportXLSX(t *testing.T, n int) *bytes.Buffer {
 	return &buf
 }
 
+func TestOpenWriteNewSheetKeepsBusinessSheet1(t *testing.T) {
+	src := excelize.NewFile()
+	t.Cleanup(func() { _ = src.Close() })
+	if err := src.SetCellStr("Sheet1", "A1", "业务数据不可删"); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := src.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+
+	wb, err := excelizex.Open(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = wb.Close() })
+
+	if err := excelizex.Write[simpleRow](wb.Sheet("新表").WithLayout(layout.HeaderData{})).
+		Rows(simpleRow{Name: "张三", Age: 18}).Apply(); err != nil {
+		t.Fatal(err)
+	}
+
+	idx, err := wb.File().GetSheetIndex("Sheet1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx == -1 {
+		t.Fatal("Sheet1 was deleted after writing another sheet on Open() workbook")
+	}
+	got, err := wb.File().GetCellValue("Sheet1", "A1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "业务数据不可删" {
+		t.Fatalf("Sheet1 content = %q", got)
+	}
+}
+
 // Each 与 Save/Apply 并发压测：同一 Workbook 上 mutex 串行化 excelize 访问。
-func TestRegressionConcurrentEachAndSave(t *testing.T) {
+func TestConcurrentEachAndSave(t *testing.T) {
 	const n = 200
 	buf := buildStressImportXLSX(t, n)
 	wb, err := excelizex.Open(buf)
@@ -87,7 +126,6 @@ func TestRegressionConcurrentEachAndSave(t *testing.T) {
 	}()
 
 	_, err = excelizex.Read[regStressImportRow](wb.Sheet("导入")).
-		Convert("grade", regStressGradeImport).
 		Each(context.Background(), func(ctx excelizex.Context, row regStressImportRow) error {
 			time.Sleep(time.Microsecond)
 
@@ -101,4 +139,11 @@ func TestRegressionConcurrentEachAndSave(t *testing.T) {
 		t.Fatalf("stress: %v", v)
 	}
 	_ = wb.Close()
+}
+
+func TestWithRowNilContext(t *testing.T) {
+	c := excelizex.WithRow(nil, 5)
+	if c.Row != 5 || c.Context == nil {
+		t.Fatalf("context: row=%d ctx=%v", c.Row, c.Context)
+	}
 }

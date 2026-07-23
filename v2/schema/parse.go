@@ -64,7 +64,6 @@ func walkStruct(t reflect.Type, prefix string, s *Schema) error {
 		col := Column{
 			Header:     header,
 			FieldPath:  prefix + f.Name,
-			Convert:    f.Tag.Get("conv"),
 			Validate:   f.Tag.Get("validate"),
 			TimeLayout: f.Tag.Get("time"),
 		}

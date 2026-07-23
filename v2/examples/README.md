@@ -4,7 +4,7 @@
 
 | 目录 | 说明 |
 |------|------|
-| [`import_collect/`](import_collect/) | `Read` → `Collect` + `Validate` + `Convert`；可选 `WriteErrors` 回写 |
+| [`import_collect/`](import_collect/) | `Read` → `Collect` + `Validate`；可选 `WriteErrors` 回写 |
 | [`import_each/`](import_each/) | `Each` 并发调用业务 `Create`，`Concurrency(n)` |
 | [`export_template/`](export_template/) | `Write` → `Template` + `Dropdown` + `Protect` |
 | [`export_rows/`](export_rows/) | `Write` → `Rows` 导出已有数据 |

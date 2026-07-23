@@ -3,7 +3,6 @@ package bind
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/cyclonevox/excelizex/v2/convert"
 	"github.com/cyclonevox/excelizex/v2/schema"
@@ -59,14 +58,18 @@ func orderedHeaders(headers map[int]string, maxIdx int) []string {
 }
 
 // BindRow converts aligned cell values into a new instance of T.
-func BindRow[T any](m Mapping, cells []string, reg convert.Registry) (T, error) {
+func BindRow[T any](m Mapping, cells []string) (T, error) {
 	var zero T
 	t := reflect.TypeOf(zero)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
 	v := reflect.New(t)
-	if err := bindValue(v.Elem(), m, cells, reg); err != nil {
+	var catchAll ExcelFieldImporter
+	if ca, ok := v.Interface().(ExcelFieldImporter); ok {
+		catchAll = ca
+	}
+	if err := bindValue(v.Elem(), m, cells, catchAll); err != nil {
 		return zero, err
 	}
 	if reflect.TypeOf(zero).Kind() == reflect.Ptr {
@@ -76,15 +79,22 @@ func BindRow[T any](m Mapping, cells []string, reg convert.Registry) (T, error) 
 	return v.Elem().Interface().(T), nil
 }
 
-func bindValue(dst reflect.Value, m Mapping, cells []string, reg convert.Registry) error {
+func bindValue(dst reflect.Value, m Mapping, cells []string, catchAll ExcelFieldImporter) error {
 	for _, e := range m.Entries {
 		raw := cellAt(cells, e.ColIndex)
+		handled, err := tryExcelImport(dst, e.Column.FieldPath, e.Column.Header, raw, catchAll)
+		if err != nil {
+			return fieldAssignError(e.Column.Header, err)
+		}
+		if handled {
+			continue
+		}
 		field, err := fieldByPath(dst, e.Column.FieldPath)
 		if err != nil {
 			return err
 		}
-		if err := convert.To(raw, field, e.Column.Convert, e.Column.TimeLayout, reg); err != nil {
-			return fmt.Errorf("%s: %w", e.Column.Header, err)
+		if err := convert.To(raw, field, e.Column.TimeLayout); err != nil {
+			return fieldAssignError(e.Column.Header, err)
 		}
 	}
 
@@ -97,31 +107,6 @@ func cellAt(cells []string, idx int) string {
 	}
 
 	return cells[idx]
-}
-
-func fieldByPath(v reflect.Value, path string) (reflect.Value, error) {
-	parts := strings.Split(path, ".")
-	cur := v
-	for _, p := range parts {
-		if p == "" {
-			continue
-		}
-		if cur.Kind() == reflect.Ptr {
-			if cur.IsNil() {
-				cur.Set(reflect.New(cur.Type().Elem()))
-			}
-			cur = cur.Elem()
-		}
-		if cur.Kind() != reflect.Struct {
-			return reflect.Value{}, fmt.Errorf("bind: invalid path %q", path)
-		}
-		cur = cur.FieldByName(p)
-		if !cur.IsValid() {
-			return reflect.Value{}, fmt.Errorf("bind: unknown field %q in path %q", p, path)
-		}
-	}
-
-	return cur, nil
 }
 
 // ExtraHeaders returns headers present in the sheet but not in schema.

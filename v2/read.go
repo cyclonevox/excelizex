@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/cyclonevox/excelizex/v2/bind"
-	"github.com/cyclonevox/excelizex/v2/convert"
 	"github.com/cyclonevox/excelizex/v2/layout"
 	"github.com/cyclonevox/excelizex/v2/schema"
 	"golang.org/x/sync/errgroup"
@@ -25,20 +24,9 @@ type Validator interface {
 // ReadBuilder configures and executes a typed read pipeline.
 type ReadBuilder[T any] struct {
 	sheet       *Sheet
-	converters  convert.Registry
 	validators  []Validator
 	concurrency int
 	failFast    bool
-}
-
-// Convert registers a named converter for this read.
-func (r *ReadBuilder[T]) Convert(name string, fn convert.ConvertFunc) *ReadBuilder[T] {
-	if r.converters == nil {
-		r.converters = make(convert.Registry)
-	}
-	r.converters[name] = fn
-
-	return r
 }
 
 // Validate adds row validators.
@@ -80,7 +68,6 @@ func (r *ReadBuilder[T]) Collect(ctx context.Context) ([]T, *Result, error) {
 		return nil, res, fmt.Errorf("read: %w", err)
 	}
 	res.setHeaders(mapping.Headers)
-	reg := convert.Registry(r.converters)
 	dataStart := lyt.DataStartRow()
 	var out []T
 	for i := dataStart - 1; i < len(rows); i++ {
@@ -92,7 +79,7 @@ func (r *ReadBuilder[T]) Collect(ctx context.Context) ([]T, *Result, error) {
 			continue
 		}
 		rowNum := i + 1
-		row, err := bind.BindRow[T](mapping, cells, reg)
+		row, err := bind.BindRow[T](mapping, cells)
 		if err != nil {
 			res.addError(rowNum, cells, err.Error())
 			if r.failFast {
@@ -161,7 +148,6 @@ func (r *ReadBuilder[T]) Each(ctx context.Context, fn func(Context, T) error, op
 	}
 	res.setHeaders(mapping.Headers)
 
-	reg := convert.Registry(r.converters)
 	dataStart := lyt.DataStartRow()
 
 	type job struct {
@@ -188,7 +174,7 @@ func (r *ReadBuilder[T]) Each(ctx context.Context, fn func(Context, T) error, op
 			if err := egCtx.Err(); err != nil {
 				return err
 			}
-			row, err := bind.BindRow[T](mapping, j.cells, reg)
+			row, err := bind.BindRow[T](mapping, j.cells)
 			if err != nil {
 				mu.Lock()
 				res.addError(j.rowNum, j.cells, err.Error())
@@ -314,16 +300,6 @@ func (r *ReadBuilder[T]) SetConcurrency(n int) *ReadBuilder[T] {
 // SetFailFast enables fail-fast mode for this builder.
 func (r *ReadBuilder[T]) SetFailFast() *ReadBuilder[T] {
 	r.failFast = true
-
-	return r
-}
-
-// ConvertTo registers a typed named converter on this read builder.
-func ConvertTo[T, V any](r *ReadBuilder[T], name string, fn func(string) (V, error)) *ReadBuilder[T] {
-	if r.converters == nil {
-		r.converters = make(convert.Registry)
-	}
-	convert.ConvertTo(r.converters, name, fn)
 
 	return r
 }

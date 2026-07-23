@@ -1,7 +1,7 @@
 ## Excelizex 只是一个简单的excel库
 
-> **v2 在 [`./v2`](v2/README.md)**（模块 `github.com/cyclonevox/excelizex/v2`）：泛型 `Read[T]`/`Write[T]`、Schema 与 Layout 分离、可插拔校验。  
-> 文档里写了 **相对 v1 改了什么、提升了什么、功能路线**。根目录本文是 **v1**（功能冻结，仅维护；API 不跟 v2 兼容）。
+> **v2 在 [`./v2`](v2/README.md)**（模块 `github.com/cyclonevox/excelizex/v2`）：泛型 `Read[T]`/`Write[T]`、Schema 与 Layout 分离、DTO 上 `ExcelField` / `Excel{字段}` 做转换、可插拔校验。  
+> **不再使用** v1 的 `excel-conv` + `SetConvert`。根目录本文是 **v1**（功能冻结，仅维护；API 不跟 v2 兼容）。
 
 中文| [English](README_ENG.md)
 

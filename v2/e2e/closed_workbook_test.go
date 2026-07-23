@@ -16,7 +16,6 @@ func TestClosedWorkbookOperations(t *testing.T) {
 
 	_, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
@@ -31,7 +30,6 @@ func TestClosedWorkbookOperations(t *testing.T) {
 
 	_, _, err = excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err == nil {
@@ -43,7 +41,6 @@ func TestClosedWorkbookOperations(t *testing.T) {
 
 	_, err = excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Each(context.Background(), func(ctx excelizex.Context, row fixture.StudentImportRow) error {
 			return nil

@@ -16,7 +16,6 @@ func TestLegacyNoticeStudentsImport(t *testing.T) {
 
 	rows, res, err := excelizex.Read[fixture.LegacyStudentRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
@@ -36,7 +35,6 @@ func TestLegacyHeaderStudentsImport(t *testing.T) {
 
 	rows, res, err := excelizex.Read[fixture.LegacyStudentRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.HeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
