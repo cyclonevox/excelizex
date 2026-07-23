@@ -10,38 +10,6 @@ import (
 	playvalidator "github.com/go-playground/validator/v10"
 )
 
-// StudentRow is a typical import DTO.
-type StudentRow struct {
-	Name  string `excel:"姓名" validate:"required"`
-	Age   int    `excel:"年龄"`
-	Grade int    `excel:"等级" conv:"grade"`
-}
-
-func exampleGradeExport(v any) (string, error) {
-	switch n := v.(type) {
-	case int:
-		switch n {
-		case 1:
-			return "A", nil
-		case 2:
-			return "B", nil
-		}
-	}
-
-	return "", fmt.Errorf("bad grade")
-}
-
-func exampleGradeImport(raw string) (any, error) {
-	switch raw {
-	case "A":
-		return 1, nil
-	case "B":
-		return 2, nil
-	default:
-		return 0, fmt.Errorf("unknown grade %q", raw)
-	}
-}
-
 type examplePlaygroundValidator struct {
 	v *playvalidator.Validate
 }
@@ -61,7 +29,6 @@ func ExampleRead() {
 	if err := excelizex.Write[StudentRow](wb.Sheet("考生导入").
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice("请按模板填写考生信息")).
-		Convert("grade", exampleGradeExport).
 		Rows(StudentRow{Name: "张三", Age: 18, Grade: 1}).
 		Apply(); err != nil {
 		fmt.Println("write:", err)
@@ -86,7 +53,6 @@ func ExampleRead() {
 	defer wb2.Close()
 
 	rows, res, err := excelizex.Read[StudentRow](wb2.Sheet("考生导入").WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", exampleGradeImport).
 		Validate(newExamplePlaygroundValidator()).
 		Collect(context.Background())
 	if err != nil {
@@ -114,7 +80,6 @@ func ExampleWrite() {
 	if err := excelizex.Write[StudentRow](wb.Sheet("考生导入").
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice("请填写考生信息")).
-		Convert("grade", exampleGradeExport).
 		Dropdown("等级", []string{"A", "B"}).
 		Rows(rows...).
 		Apply(); err != nil {

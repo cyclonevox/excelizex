@@ -1,6 +1,7 @@
 package convert_test
 
 import (
+	"encoding"
 	"fmt"
 	"reflect"
 	"testing"
@@ -10,76 +11,55 @@ import (
 )
 
 func TestFromBuiltin(t *testing.T) {
-	reg := convert.ExportRegistry{}
 	v := reflect.ValueOf(true)
-	s, err := convert.From(v, "", "", reg)
+	s, err := convert.From(v, "")
 	if err != nil || s != "是" {
 		t.Fatalf("bool: %q err=%v", s, err)
 	}
 	tm := time.Date(2024, 9, 1, 0, 0, 0, 0, time.UTC)
-	s, err = convert.From(reflect.ValueOf(tm), "", "2006-01-02", reg)
+	s, err = convert.From(reflect.ValueOf(tm), "2006-01-02")
 	if err != nil || s != "2024-09-01" {
 		t.Fatalf("time: %q err=%v", s, err)
 	}
 }
 
-func TestExportTo(t *testing.T) {
-	reg := convert.ExportRegistry{}
-	convert.ExportTo(reg, "x", func(n int) (string, error) {
-		return "n", nil
-	})
-	s, err := reg["x"](42)
-	if err != nil || s != "n" {
-		t.Fatalf("export: %q err=%v", s, err)
+type gradeLabel int
+
+func (g gradeLabel) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf("G%d", g)), nil
+}
+
+var _ encoding.TextMarshaler = gradeLabel(0)
+
+func TestTextMarshaler(t *testing.T) {
+	s, err := convert.From(reflect.ValueOf(gradeLabel(2)), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s != "G2" {
+		t.Fatalf("got %q want G2", s)
 	}
 }
 
-func TestExportToString(t *testing.T) {
-	reg := convert.ExportRegistry{}
-	convert.ExportToString(reg, "upper", func(s string) (string, error) {
-		if s == "" {
-			return "(empty)", nil
-		}
+type gradeChar int
 
-		return s + "!", nil
-	})
-
-	tests := []struct {
-		name string
-		in   any
-		want string
-	}{
-		{name: "value", in: "hi", want: "hi!"},
-		{name: "nil", in: nil, want: "(empty)"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := reg["upper"](tt.in)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != tt.want {
-				t.Fatalf("got %q want %q", got, tt.want)
-			}
-		})
+func (g gradeChar) MarshalText() ([]byte, error) {
+	switch g {
+	case 1:
+		return []byte("A"), nil
+	case 2:
+		return []byte("B"), nil
+	default:
+		return nil, fmt.Errorf("unknown grade %d", g)
 	}
 }
 
-func TestExportToEdgeCases(t *testing.T) {
-	reg := convert.ExportRegistry{}
-	convert.ExportTo(reg, "id", func(n int) (string, error) {
-		return fmt.Sprintf("%d", n), nil
-	})
-
-	s, err := reg["id"]((*int)(nil))
-	if err != nil || s != "0" {
-		t.Fatalf("nil ptr: %q err=%v", s, err)
+func TestTextMarshalerGrade(t *testing.T) {
+	s, err := convert.From(reflect.ValueOf(gradeChar(1)), "")
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	convert.ExportTo(reg, "strict", func(n int) (string, error) {
-		return "ok", nil
-	})
-	if _, err := reg["strict"]("not-int"); err == nil {
-		t.Fatal("expected type mismatch error")
+	if s != "A" {
+		t.Fatalf("got %q want A", s)
 	}
 }

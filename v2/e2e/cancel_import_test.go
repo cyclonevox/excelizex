@@ -33,7 +33,6 @@ func TestCancelImportDuringEach(t *testing.T) {
 
 	_, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Each(ctx, func(ctx excelizex.Context, row fixture.StudentImportRow) error {
 			processed.Add(1)
@@ -58,7 +57,6 @@ func TestCancelImportDuringCollect(t *testing.T) {
 
 	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(ctx)
 	if !errors.Is(err, context.Canceled) {

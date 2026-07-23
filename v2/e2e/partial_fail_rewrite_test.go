@@ -15,7 +15,6 @@ func TestPartialFailRewriteAndReimport(t *testing.T) {
 
 	_, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
@@ -34,7 +33,6 @@ func TestPartialFailRewriteAndReimport(t *testing.T) {
 
 	rows, res2, err := excelizex.Read[fixture.StudentImportRow](wb2.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {
@@ -63,7 +61,6 @@ func TestPartialFailRewriteAndReimport(t *testing.T) {
 	defer wb3.Close()
 	rows3, res3, err := excelizex.Read[fixture.StudentImportRow](wb3.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {

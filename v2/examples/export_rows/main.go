@@ -26,7 +26,6 @@ func main() {
 	if err := excelizex.Write[demo.StudentRow](wb.Sheet(demo.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice(demo.NoticeFillStudents)).
-		Convert("grade", demo.GradeExport).
 		Dropdown("年级", []string{"A", "B"}).
 		Rows(rows...).
 		Apply(); err != nil {

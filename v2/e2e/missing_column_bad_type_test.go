@@ -27,7 +27,6 @@ func TestMissingColumnAndBadType(t *testing.T) {
 	// 年龄列类型转换失败，在 Validate 之前即记入 Result。
 	_, res, err := excelizex.Read[fixture.StudentImportRow](wb2.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)

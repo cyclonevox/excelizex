@@ -17,7 +17,6 @@ func TestReorderedHeadersWithExtraColumn(t *testing.T) {
 	// 夹具 notice 文案与 NoticeFillStudents 不同，仅显式 WithLayout。
 	rows, res, err := excelizex.Read[fixture.ReorderedRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Collect(context.Background())
 	if err != nil {

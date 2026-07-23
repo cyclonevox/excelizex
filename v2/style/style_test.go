@@ -84,3 +84,36 @@ func TestSplitRole(t *testing.T) {
 		t.Fatalf("parts: %v", parts)
 	}
 }
+
+func TestStyleBodyBluePlusLockedKeepsFillAndProtection(t *testing.T) {
+	f := excelize.NewFile()
+	t.Cleanup(func() { _ = f.Close() })
+	reg := style.NewRegistry(f)
+	if err := reg.RegisterDefaults(); err != nil {
+		t.Fatal(err)
+	}
+	id, err := reg.Resolve("body-blue", "locked")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.SetCellStyle("Sheet1", "A1", "A1", id); err != nil {
+		t.Fatal(err)
+	}
+	styleID, err := f.GetCellStyle("Sheet1", "A1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := f.GetStyle(styleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Fill.Type == "" || len(st.Fill.Color) == 0 || st.Fill.Color[0] == "" {
+		t.Fatalf("expected body-blue fill retained, got %+v", st.Fill)
+	}
+	if st.NumFmt != 49 {
+		t.Fatalf("expected NumFmt 49, got %d", st.NumFmt)
+	}
+	if st.Protection == nil || !st.Protection.Locked {
+		t.Fatalf("expected locked protection, got %+v", st.Protection)
+	}
+}

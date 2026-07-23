@@ -34,7 +34,6 @@ func main() {
 	rows, res, err := excelizex.Read[demo.StudentRow](wb.Sheet(demo.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice(demo.NoticeFillStudents)).
-		Convert("grade", demo.GradeImport).
 		Validate(demo.NewPlaygroundValidator()).
 		Collect(context.Background())
 	if err != nil {

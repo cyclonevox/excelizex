@@ -9,12 +9,6 @@ import (
 	"time"
 )
 
-// ConvertFunc converts a raw cell string to a typed value.
-type ConvertFunc func(raw string) (any, error)
-
-// Registry holds named converters registered for a read operation.
-type Registry map[string]ConvertFunc
-
 // BoolTrueValues are accepted as true when parsing bool cells.
 var BoolTrueValues = map[string]struct{}{
 	"true": {}, "1": {}, "是": {}, "yes": {}, "y": {},
@@ -34,23 +28,11 @@ var commonTimeLayouts = []string{
 	"2006/1/2",
 }
 
-// To assigns raw into dst based on dst's type, optional named converter, and time layout.
-func To(raw string, dst reflect.Value, named string, timeLayout string, reg Registry) error {
+// To assigns raw into dst based on dst's type and optional time layout.
+func To(raw string, dst reflect.Value, timeLayout string) error {
 	raw = strings.TrimSpace(raw)
 	if !dst.CanSet() {
 		return fmt.Errorf("convert: cannot set field")
-	}
-	if named != "" {
-		fn, ok := reg[named]
-		if !ok {
-			return fmt.Errorf("convert: unknown converter %q", named)
-		}
-		v, err := fn(raw)
-		if err != nil {
-			return err
-		}
-
-		return assignValue(dst, v)
 	}
 
 	return builtin(raw, dst, timeLayout)
@@ -68,6 +50,18 @@ func builtin(raw string, dst reflect.Value, timeLayout string) error {
 		}
 
 		return builtin(raw, dst.Elem(), timeLayout)
+	}
+	if dst.Kind() == reflect.Struct && dst.Type() == reflect.TypeOf(time.Time{}) {
+		t, err := parseTime(raw, timeLayout)
+		if err != nil {
+			return err
+		}
+		dst.Set(reflect.ValueOf(t))
+
+		return nil
+	}
+	if u, ok := textUnmarshaler(dst); ok {
+		return u.UnmarshalText([]byte(raw))
 	}
 	switch dst.Kind() {
 	case reflect.String:
@@ -122,23 +116,25 @@ func builtin(raw string, dst reflect.Value, timeLayout string) error {
 
 		return nil
 	case reflect.Struct:
-		if dst.Type() == reflect.TypeOf(time.Time{}) {
-			t, err := parseTime(raw, timeLayout)
-			if err != nil {
-				return err
-			}
-			dst.Set(reflect.ValueOf(t))
-
-			return nil
-		}
-	}
-	if dst.CanAddr() {
-		if u, ok := dst.Addr().Interface().(encoding.TextUnmarshaler); ok {
-			return u.UnmarshalText([]byte(raw))
-		}
+		return fmt.Errorf("convert: unsupported type %s", dst.Type())
 	}
 
 	return fmt.Errorf("convert: unsupported type %s", dst.Type())
+}
+
+func textUnmarshaler(v reflect.Value) (encoding.TextUnmarshaler, bool) {
+	if v.CanAddr() {
+		if u, ok := v.Addr().Interface().(encoding.TextUnmarshaler); ok {
+			return u, true
+		}
+	}
+	if v.CanInterface() {
+		if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
+			return u, true
+		}
+	}
+
+	return nil, false
 }
 
 func parseBool(raw string) (bool, error) {
@@ -175,37 +171,4 @@ func parseTime(raw, layout string) (time.Time, error) {
 	}
 
 	return time.Time{}, fmt.Errorf("convert: invalid time %q", raw)
-}
-
-func assignValue(dst reflect.Value, v any) error {
-	if v == nil {
-		dst.Set(reflect.Zero(dst.Type()))
-
-		return nil
-	}
-	rv := reflect.ValueOf(v)
-	if !rv.IsValid() {
-		dst.Set(reflect.Zero(dst.Type()))
-
-		return nil
-	}
-	if rv.Type().AssignableTo(dst.Type()) {
-		dst.Set(rv)
-
-		return nil
-	}
-	if rv.Type().ConvertibleTo(dst.Type()) {
-		dst.Set(rv.Convert(dst.Type()))
-
-		return nil
-	}
-
-	return fmt.Errorf("convert: cannot assign %T to %s", v, dst.Type())
-}
-
-// ConvertTo registers a typed named converter helper.
-func ConvertTo[T any](reg Registry, name string, fn func(string) (T, error)) {
-	reg[name] = func(raw string) (any, error) {
-		return fn(raw)
-	}
 }

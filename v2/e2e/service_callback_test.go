@@ -42,7 +42,6 @@ func TestServiceCallbackImportStyle(t *testing.T) {
 	svc := &fakeImportSvc{}
 	res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Each(context.Background(), func(ctx excelizex.Context, row fixture.StudentImportRow) error {
 			return svc.Create(ctx, row)

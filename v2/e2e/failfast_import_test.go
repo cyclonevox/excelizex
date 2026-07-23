@@ -16,7 +16,6 @@ func TestFailFastImport(t *testing.T) {
 
 	rows, res, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		SetFailFast().
 		Collect(context.Background())

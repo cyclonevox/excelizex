@@ -5,22 +5,76 @@ import (
 	"time"
 )
 
-// StudentImportRow 考生批量导入 DTO（NoticeHeaderData + 年级 conv）。
+func parseGradeAB(raw string) (int, error) {
+	switch raw {
+	case "A":
+		return 1, nil
+	case "B":
+		return 2, nil
+	case "":
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("unknown grade %q", raw)
+	}
+}
+
+func formatGradeAB(n int) (string, error) {
+	switch n {
+	case 1:
+		return "A", nil
+	case 2:
+		return "B", nil
+	case 0:
+		return "", nil
+	default:
+		return "", fmt.Errorf("unknown grade %d", n)
+	}
+}
+
+// StudentImportRow 考生批量导入 DTO（NoticeHeaderData + ExcelGrade）。
 type StudentImportRow struct {
 	Notice string `excel:"notice"`
 	Name   string `excel:"姓名" validate:"required"`
 	IDCard string `excel:"身份证"`
 	Age    int    `excel:"年龄"`
-	Grade  int    `excel:"年级" conv:"grade"`
+	Grade  int    `excel:"年级"`
+}
+
+func (r *StudentImportRow) ExcelGrade(raw string) error {
+	n, err := parseGradeAB(raw)
+	if err != nil {
+		return err
+	}
+	r.Grade = n
+
+	return nil
+}
+
+func (r *StudentImportRow) ExcelExportGrade() (string, error) {
+	return formatGradeAB(r.Grade)
 }
 
 // ReorderedRow 表头顺序与 struct 字段不一致时的绑定 DTO。
 type ReorderedRow struct {
 	Age    int    `excel:"年龄"`
 	Name   string `excel:"姓名" validate:"required"`
-	Grade  int    `excel:"年级" conv:"grade"`
+	Grade  int    `excel:"年级"`
 	Extra  string `excel:"备注"`
 	Unused string `excel:"-"`
+}
+
+func (r *ReorderedRow) ExcelGrade(raw string) error {
+	n, err := parseGradeAB(raw)
+	if err != nil {
+		return err
+	}
+	r.Grade = n
+
+	return nil
+}
+
+func (r *ReorderedRow) ExcelExportGrade() (string, error) {
+	return formatGradeAB(r.Grade)
 }
 
 // Address 嵌套地址（inline flatten）。
@@ -60,34 +114,19 @@ type TimeBoolRow struct {
 type LegacyStudentRow struct {
 	Name  string `excel:"姓名" validate:"required"`
 	Age   int    `excel:"年龄"`
-	Grade int    `excel:"等级" conv:"grade"`
+	Grade int    `excel:"等级"`
 }
 
-// GradeImport A/B → int。
-func GradeImport(raw string) (any, error) {
-	switch raw {
-	case "A":
-		return 1, nil
-	case "B":
-		return 2, nil
-	default:
-		return 0, fmt.Errorf("unknown grade %q", raw)
+func (r *LegacyStudentRow) ExcelGrade(raw string) error {
+	n, err := parseGradeAB(raw)
+	if err != nil {
+		return err
 	}
+	r.Grade = n
+
+	return nil
 }
 
-// GradeExport int → A/B。
-func GradeExport(v any) (string, error) {
-	switch n := v.(type) {
-	case int:
-		switch n {
-		case 1:
-			return "A", nil
-		case 2:
-			return "B", nil
-		default:
-			return "", fmt.Errorf("unknown grade %d", n)
-		}
-	default:
-		return "", fmt.Errorf("bad grade type")
-	}
+func (r *LegacyStudentRow) ExcelExportGrade() (string, error) {
+	return formatGradeAB(r.Grade)
 }

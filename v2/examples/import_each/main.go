@@ -49,7 +49,6 @@ func main() {
 	res, err := excelizex.Read[demo.StudentRow](wb.Sheet(demo.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice(demo.NoticeFillStudents)).
-		Convert("grade", demo.GradeImport).
 		Validate(demo.NewPlaygroundValidator()).
 		Each(context.Background(), func(ctx excelizex.Context, row demo.StudentRow) error {
 			return svc.Create(ctx, row)

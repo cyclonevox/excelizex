@@ -120,7 +120,6 @@ func WriteStudentBatch(t *testing.T, rows ...StudentImportRow) *bytes.Buffer {
 	if err := excelizex.Write[StudentImportRow](wb.Sheet(SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice(NoticeFillStudents)).
-		Convert("grade", GradeExport).
 		Rows(rows...).
 		Apply(); err != nil {
 		t.Fatal(err)

@@ -28,21 +28,10 @@ type dropdownSpec struct {
 // WriteBuilder configures and executes a typed write pipeline.
 type WriteBuilder[T any] struct {
 	sheet           *Sheet
-	converters      convert.ExportRegistry
 	rows            []T
 	templateOnly    bool
 	dropdowns       []dropdownSpec
 	protectPassword string
-}
-
-// Convert registers a named export converter for this write.
-func (w *WriteBuilder[T]) Convert(name string, fn convert.ExportFunc) *WriteBuilder[T] {
-	if w.converters == nil {
-		w.converters = make(convert.ExportRegistry)
-	}
-	w.converters[name] = fn
-
-	return w
 }
 
 // Rows sets data rows to write under the layout.
@@ -123,7 +112,7 @@ func (w *WriteBuilder[T]) Apply() error {
 
 	dataCount := 0
 	if !w.templateOnly && len(w.rows) > 0 {
-		dataCount, err = writeDataRows(w.sheet.wb, w.sheet.name, lyt, sc, w.rows, w.converters)
+		dataCount, err = writeDataRows(w.sheet.wb, w.sheet.name, lyt, sc, w.rows)
 		if err != nil {
 			return err
 		}
@@ -142,13 +131,6 @@ func (w *WriteBuilder[T]) Apply() error {
 	}
 
 	return nil
-}
-
-// ExportTo registers a typed named export converter on this write builder.
-func ExportTo[T any, V any](w *WriteBuilder[T], name string, fn func(V) (string, error)) *WriteBuilder[T] {
-	convert.ExportTo(w.converters, name, fn)
-
-	return w
 }
 
 func (w *WriteBuilder[T]) schemaForWrite() (schema.Schema, error) {
@@ -290,7 +272,7 @@ func noticeFromRow[T any](sc schema.Schema, row T) (string, error) {
 		return "", nil
 	}
 
-	return convert.From(f, "", "", nil)
+	return convert.From(f, "")
 }
 
 func writeNotice(wb *Workbook, sheet string, lyt layout.Layout, text string) error {
@@ -344,10 +326,10 @@ func writeHeaders(wb *Workbook, sheet string, lyt layout.Layout, sc schema.Schem
 	return nil
 }
 
-func writeDataRows[T any](wb *Workbook, sheet string, lyt layout.Layout, sc schema.Schema, rows []T, reg convert.ExportRegistry) (int, error) {
+func writeDataRows[T any](wb *Workbook, sheet string, lyt layout.Layout, sc schema.Schema, rows []T) (int, error) {
 	dataStart := lyt.DataStartRow()
 	for i, row := range rows {
-		cells, err := bind.ExportRow(sc, row, reg)
+		cells, err := bind.ExportRow(sc, row)
 		if err != nil {
 			return i, fmt.Errorf("write: row %d: %w", i+1, err)
 		}

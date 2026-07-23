@@ -1,7 +1,6 @@
 package excelizex
 
 import (
-	"github.com/cyclonevox/excelizex/v2/convert"
 	"github.com/cyclonevox/excelizex/v2/layout"
 	"github.com/cyclonevox/excelizex/v2/schema"
 )
@@ -53,7 +52,6 @@ func (s *Sheet) WithNotice(text string) *Sheet {
 func Read[T any](s *Sheet) *ReadBuilder[T] {
 	return &ReadBuilder[T]{
 		sheet:       s,
-		converters:  make(convert.Registry),
 		validators:  nil,
 		concurrency: 1,
 	}
@@ -63,7 +61,6 @@ func Read[T any](s *Sheet) *ReadBuilder[T] {
 // Use as: wb.Sheet("导入").WithLayout(...).Write[StudentRow]().Rows(...).Apply()
 func Write[T any](s *Sheet) *WriteBuilder[T] {
 	return &WriteBuilder[T]{
-		sheet:      s,
-		converters: make(convert.ExportRegistry),
+		sheet: s,
 	}
 }

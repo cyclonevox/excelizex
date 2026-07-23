@@ -6,46 +6,28 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	excelizex "github.com/cyclonevox/excelizex/v2"
 	"github.com/cyclonevox/excelizex/v2/layout"
 	"github.com/cyclonevox/excelizex/v2/schema"
-	"github.com/cyclonevox/excelizex/v2/style"
 	"github.com/xuri/excelize/v2"
 )
 
-func buildNoticeGradeSheet(t *testing.T, dataRows [][]string) *bytes.Buffer {
-	t.Helper()
-	f := excelize.NewFile()
-	sheet := "导入"
-	_, _ = f.NewSheet(sheet)
-	_ = f.DeleteSheet("Sheet1")
-	_ = f.SetCellStr(sheet, "A1", "请按模板填写")
-	_ = f.SetSheetRow(sheet, "A2", &[]string{"姓名", "年龄", "等级"})
-	for i, row := range dataRows {
-		addr, _ := excelize.JoinCellName("A", 3+i)
-		_ = f.SetSheetRow(sheet, addr, &row)
-	}
-	var buf bytes.Buffer
-	if err := f.Write(&buf); err != nil {
-		t.Fatal(err)
-	}
+type twiceInt int
 
-	return &buf
-}
-
-func openWorkbook(t *testing.T, buf *bytes.Buffer) *excelizex.Workbook {
-	t.Helper()
-	wb, err := excelizex.Open(buf)
+func (t *twiceInt) UnmarshalText(text []byte) error {
+	n, err := strconv.Atoi(string(text))
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
-	t.Cleanup(func() { _ = wb.Close() })
+	*t = twiceInt(n * 2)
 
-	return wb
+	return nil
 }
 
 func TestEachMap(t *testing.T) {
@@ -64,8 +46,7 @@ func TestEachMap(t *testing.T) {
 			mu   sync.Mutex
 		)
 		_, err := excelizex.EachMap(
-			excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-				Convert("grade", exampleGradeImport),
+			excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})),
 			context.Background(),
 			func(row StudentRow) (cmd, error) {
 				return cmd{Label: row.Name + "-ok"}, nil
@@ -98,8 +79,7 @@ func TestEachMap(t *testing.T) {
 
 		type cmd struct{}
 		res, err := excelizex.EachMap(
-			excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-				Convert("grade", exampleGradeImport),
+			excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})),
 			context.Background(),
 			func(row StudentRow) (cmd, error) {
 				if row.Name == "bad" {
@@ -122,9 +102,9 @@ func TestEachMap(t *testing.T) {
 	})
 }
 
-func TestConvertToRead(t *testing.T) {
+func TestTextUnmarshalerRead(t *testing.T) {
 	type twiceRow struct {
-		N int `excel:"数值" conv:"twice"`
+		N twiceInt `excel:"数值"`
 	}
 
 	f := excelize.NewFile()
@@ -139,18 +119,8 @@ func TestConvertToRead(t *testing.T) {
 	}
 	wb := openWorkbook(t, &buf)
 
-	rows, _, err := excelizex.ConvertTo(
-		excelizex.Read[twiceRow](wb.Sheet(sheet).WithLayout(layout.HeaderData{})),
-		"twice",
-		func(raw string) (int, error) {
-			n, err := strconv.Atoi(raw)
-			if err != nil {
-				return 0, err
-			}
-
-			return n * 2, nil
-		},
-	).Collect(context.Background())
+	rows, _, err := excelizex.Read[twiceRow](wb.Sheet(sheet).WithLayout(layout.HeaderData{})).
+		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +140,6 @@ func TestSetConcurrency(t *testing.T) {
 
 	var count atomic.Int32
 	_, err := excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", exampleGradeImport).
 		SetConcurrency(2).
 		Each(context.Background(), func(_ excelizex.Context, _ StudentRow) error {
 			count.Add(1)
@@ -193,7 +162,6 @@ func TestFailFastOption(t *testing.T) {
 	wb := openWorkbook(t, buf)
 
 	_, err := excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", exampleGradeImport).
 		Each(context.Background(), func(_ excelizex.Context, _ StudentRow) error {
 			return nil
 		}, excelizex.FailFast())
@@ -215,7 +183,6 @@ func TestWithSchema(t *testing.T) {
 		WithLayout(layout.NoticeHeaderData{}).
 		WithSchema(sc).
 		WithNotice("请按模板填写")).
-		Convert("grade", exampleGradeExport).
 		Rows(StudentRow{Name: "王五", Age: 22, Grade: 1}).
 		Apply(); err != nil {
 		t.Fatal(err)
@@ -230,7 +197,6 @@ func TestWithSchema(t *testing.T) {
 	rows, res, err := excelizex.Read[StudentRow](wb2.Sheet("导入").
 		WithLayout(layout.NoticeHeaderData{}).
 		WithSchema(sc)).
-		Convert("grade", exampleGradeImport).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -243,62 +209,11 @@ func TestWithSchema(t *testing.T) {
 	}
 }
 
-func TestRegisterStyle(t *testing.T) {
-	wb := excelizex.New()
-	t.Cleanup(func() { _ = wb.Close() })
-
-	accent := style.New("accent", &excelize.Style{
-		Font: &excelize.Font{Bold: true, Color: "#00AA00"},
-	})
-	if err := wb.RegisterStyle(accent); err != nil {
-		t.Fatal(err)
-	}
-
-	type styledRow struct {
-		Name string `excel:"姓名" style:"accent,body"`
-		Age  int    `excel:"年龄" style:"header,body"`
-	}
-
-	if err := excelizex.Write[styledRow](wb.Sheet("样式").WithLayout(layout.HeaderData{})).
-		Rows(styledRow{Name: "测试", Age: 30}).
-		Apply(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestExportToWriteBuilder(t *testing.T) {
-	type gradeRow struct {
-		Grade int `excel:"等级" conv:"grade"`
-	}
-
-	wb := excelizex.New()
-	t.Cleanup(func() { _ = wb.Close() })
-
-	if err := excelizex.ExportTo(
-		excelizex.Write[gradeRow](wb.Sheet("导出").WithLayout(layout.HeaderData{})),
-		"grade",
-		func(g int) (string, error) {
-			return fmt.Sprintf("G%d", g), nil
-		},
-	).Rows(gradeRow{Grade: 2}).Apply(); err != nil {
-		t.Fatal(err)
-	}
-
-	val, err := wb.File().GetCellValue("导出", "A2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != "G2" {
-		t.Fatalf("cell: %q want G2", val)
-	}
-}
-
 func TestResultHelpers(t *testing.T) {
 	buf := buildNoticeGradeSheet(t, [][]string{{"张三", "18", "A"}})
 	wb := openWorkbook(t, buf)
 
 	_, res, err := excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", exampleGradeImport).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -315,30 +230,6 @@ func TestResultHelpers(t *testing.T) {
 	}
 }
 
-func TestNoticeFromRowField(t *testing.T) {
-	type noticeRow struct {
-		Notice string `excel:"notice"`
-		Name   string `excel:"姓名"`
-	}
-
-	wb := excelizex.New()
-	t.Cleanup(func() { _ = wb.Close() })
-
-	if err := excelizex.Write[noticeRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-		Rows(noticeRow{Notice: "从行字段生成提示", Name: "张三"}).
-		Apply(); err != nil {
-		t.Fatal(err)
-	}
-
-	val, err := wb.File().GetCellValue("导入", "A1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != "从行字段生成提示" {
-		t.Fatalf("notice cell: %q", val)
-	}
-}
-
 func TestWriteErrorsPadRow(t *testing.T) {
 	wb := excelizex.New()
 	t.Cleanup(func() { _ = wb.Close() })
@@ -346,7 +237,6 @@ func TestWriteErrorsPadRow(t *testing.T) {
 	if err := excelizex.Write[StudentRow](wb.Sheet("导入").
 		WithLayout(layout.NoticeHeaderData{}).
 		WithNotice("提示")).
-		Convert("grade", exampleGradeExport).
 		Rows(
 			StudentRow{Name: "张三", Age: 18, Grade: 1},
 			StudentRow{Name: "李四", Age: 20, Grade: 2},
@@ -357,7 +247,6 @@ func TestWriteErrorsPadRow(t *testing.T) {
 	_ = wb.File().SetSheetRow("导入", "A4", &[]string{"王五", "bad", "A"})
 
 	_, res, err := excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", exampleGradeImport).
 		Collect(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -382,20 +271,12 @@ func TestWriteErrorsPadRow(t *testing.T) {
 	}
 }
 
-func TestWithRowNilContext(t *testing.T) {
-	c := excelizex.WithRow(nil, 5)
-	if c.Row != 5 || c.Context == nil {
-		t.Fatalf("context: row=%d ctx=%v", c.Row, c.Context)
-	}
-}
-
 func TestConcurrencyOptionClamp(t *testing.T) {
 	buf := buildNoticeGradeSheet(t, [][]string{{"张三", "18", "A"}})
 	wb := openWorkbook(t, buf)
 
 	var count atomic.Int32
 	_, err := excelizex.Read[StudentRow](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", exampleGradeImport).
 		Each(context.Background(), func(_ excelizex.Context, _ StudentRow) error {
 			count.Add(1)
 
@@ -407,4 +288,137 @@ func TestConcurrencyOptionClamp(t *testing.T) {
 	if count.Load() != 1 {
 		t.Fatalf("processed %d want 1", count.Load())
 	}
+}
+
+func TestEachDefaultConcurrencyIsOne(t *testing.T) {
+	wb := excelizex.New()
+	t.Cleanup(func() { _ = wb.Close() })
+	rows := make([]simpleRow, 8)
+	for i := range rows {
+		rows[i] = simpleRow{Name: fmt.Sprintf("u%d", i), Age: i}
+	}
+	if err := excelizex.Write[simpleRow](wb.Sheet("导入").WithLayout(layout.HeaderData{})).
+		Rows(rows...).Apply(); err != nil {
+		t.Fatal(err)
+	}
+
+	var current, maxConcurrent atomic.Int32
+	_, err := excelizex.Read[simpleRow](wb.Sheet("导入").WithLayout(layout.HeaderData{})).
+		Each(context.Background(), func(_ excelizex.Context, _ simpleRow) error {
+			c := current.Add(1)
+			for {
+				old := maxConcurrent.Load()
+				if c <= old || maxConcurrent.CompareAndSwap(old, c) {
+					break
+				}
+			}
+			time.Sleep(25 * time.Millisecond)
+			current.Add(-1)
+
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if maxConcurrent.Load() != 1 {
+		t.Fatalf("max concurrent workers = %d, want 1", maxConcurrent.Load())
+	}
+}
+
+func TestConcurrencyOptionOverridesSetConcurrency(t *testing.T) {
+	wb := excelizex.New()
+	t.Cleanup(func() { _ = wb.Close() })
+	rows := make([]simpleRow, 8)
+	for i := range rows {
+		rows[i] = simpleRow{Name: fmt.Sprintf("u%d", i), Age: i}
+	}
+	if err := excelizex.Write[simpleRow](wb.Sheet("导入").WithLayout(layout.HeaderData{})).
+		Rows(rows...).Apply(); err != nil {
+		t.Fatal(err)
+	}
+
+	var current, maxConcurrent atomic.Int32
+	_, err := excelizex.Read[simpleRow](wb.Sheet("导入").WithLayout(layout.HeaderData{})).
+		SetConcurrency(8).
+		Each(context.Background(), func(_ excelizex.Context, _ simpleRow) error {
+			c := current.Add(1)
+			for {
+				old := maxConcurrent.Load()
+				if c <= old || maxConcurrent.CompareAndSwap(old, c) {
+					break
+				}
+			}
+			time.Sleep(25 * time.Millisecond)
+			current.Add(-1)
+
+			return nil
+		}, excelizex.Concurrency(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if maxConcurrent.Load() != 1 {
+		t.Fatalf("max concurrent workers = %d, want 1 after Concurrency(1)", maxConcurrent.Load())
+	}
+}
+
+func TestWriteErrorsOrdersConcurrentFailuresByRow(t *testing.T) {
+	wb := excelizex.New()
+	t.Cleanup(func() { _ = wb.Close() })
+	rows := make([]simpleRow, 20)
+	for i := range rows {
+		rows[i] = simpleRow{Name: fmt.Sprintf("u%d", i), Age: i}
+	}
+	if err := excelizex.Write[simpleRow](wb.Sheet("导入").WithLayout(layout.HeaderData{})).
+		Rows(rows...).Apply(); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := excelizex.Read[simpleRow](wb.Sheet("导入").WithLayout(layout.HeaderData{})).
+		Each(context.Background(), func(ctx excelizex.Context, row simpleRow) error {
+			if row.Age%2 == 0 {
+				return fmt.Errorf("fail age %d", row.Age)
+			}
+
+			return nil
+		}, excelizex.Concurrency(8))
+	if err != nil {
+		t.Fatal(err)
+	}
+	errs := res.Errors()
+	if len(errs) == 0 {
+		t.Fatal("expected row errors")
+	}
+	for i := 1; i < len(errs); i++ {
+		if errs[i].Row < errs[i-1].Row {
+			t.Fatalf("errors not sorted by row: %d then %d", errs[i-1].Row, errs[i].Row)
+		}
+	}
+	if err := wb.WriteErrors(res); err != nil {
+		t.Fatal(err)
+	}
+	outRows, err := wb.File().GetRows("导入")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prevAge := -1
+	for i := 1; i < len(outRows); i++ {
+		age := mustAtoi(t, outRows[i][1])
+		if age < prevAge {
+			t.Fatalf("WriteErrors rows out of order: age %d after %d", age, prevAge)
+		}
+		prevAge = age
+		if !strings.Contains(outRows[i][len(outRows[i])-1], "fail age") {
+			t.Fatalf("missing error message on row %v", outRows[i])
+		}
+	}
+}
+
+func mustAtoi(t *testing.T, s string) int {
+	t.Helper()
+	var n int
+	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
+		t.Fatalf("atoi %q: %v", s, err)
+	}
+
+	return n
 }

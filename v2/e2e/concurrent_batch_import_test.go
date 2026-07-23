@@ -33,7 +33,6 @@ func TestConcurrentBatchImport(t *testing.T) {
 	var count atomic.Int32
 	_, err := excelizex.Read[fixture.StudentImportRow](wb.Sheet(fixture.SheetStudentImport).
 		WithLayout(layout.NoticeHeaderData{})).
-		Convert("grade", fixture.GradeImport).
 		Validate(fixture.StructValidator()).
 		Each(context.Background(), func(ctx excelizex.Context, row fixture.StudentImportRow) error {
 			if _, loaded := seen.LoadOrStore(row.Name, struct{}{}); loaded {

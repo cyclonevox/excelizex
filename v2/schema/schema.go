@@ -9,7 +9,6 @@ import (
 type Column struct {
 	Header     string
 	FieldPath  string
-	Convert    string
 	Validate   string
 	Style      []string
 	TimeLayout string
