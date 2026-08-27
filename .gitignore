@@ -4,4 +4,5 @@
 /vendor/
 /.vendor_removed/
 examples/enrollment/out/
+examples/scores/out/
 /enrollment

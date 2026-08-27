@@ -15,6 +15,18 @@ type Layout interface {
 	RenderHeaders(headers []string) ([][]any, error)
 }
 
+// Merge is a 1-based row / 0-based column range to merge on the header band.
+type Merge struct {
+	Row  int
+	From int
+	To   int
+}
+
+// Merger is an optional Layout extension for grouped header cells.
+type Merger interface {
+	HeaderMerges(headerStart, nCols int) []Merge
+}
+
 // NoticeHeaderData: row1 notice (optional), row2 header, row3+ data.
 type NoticeHeaderData struct{}
 
@@ -75,4 +87,35 @@ func singleRowRender(headers []string) ([][]any, error) {
 	}
 
 	return [][]any{row}, nil
+}
+
+func resolveLastNonEmpty(headerRows [][]string) (map[int]string, error) {
+	if len(headerRows) == 0 {
+		return nil, fmt.Errorf("layout: empty header rows")
+	}
+	maxCols := 0
+	for _, row := range headerRows {
+		if len(row) > maxCols {
+			maxCols = len(row)
+		}
+	}
+	out := make(map[int]string)
+	for col := 0; col < maxCols; col++ {
+		name := ""
+		for _, row := range headerRows {
+			if col < len(row) {
+				if h := strings.TrimSpace(row[col]); h != "" {
+					name = h
+				}
+			}
+		}
+		if name != "" {
+			out[col] = name
+		}
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("layout: empty header rows")
+	}
+
+	return out, nil
 }

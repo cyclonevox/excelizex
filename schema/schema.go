@@ -18,6 +18,9 @@ type Column struct {
 type Schema struct {
 	Columns []Column
 	Notice  string
+	// ExtendField is the FieldPath of a map[string]string tagged excel:",extend"
+	// (or excel:"extend"). Extra sheet columns bind into that map; it is not itself a column.
+	ExtendField string
 }
 
 // New builds a Schema from a struct value or pointer.

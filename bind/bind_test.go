@@ -88,6 +88,45 @@ func TestBindInlineNestedPath(t *testing.T) {
 	}
 }
 
+func TestBindExtendMap(t *testing.T) {
+	type row struct {
+		Name  string            `excel:"姓名"`
+		Extra map[string]string `excel:",extend"`
+	}
+	sc, err := schema.New(row{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := bind.MatchColumns(sc, map[int]string{0: "姓名", 1: "语文", 2: "数学"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Extra) != 2 || m.Extra[0].Column.Header != "语文" {
+		t.Fatalf("extra: %+v", m.Extra)
+	}
+	got, err := bind.BindRow[row](m, []string{"张三", "90", "80"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "张三" || got.Extra["语文"] != "90" || got.Extra["数学"] != "80" {
+		t.Fatalf("row: %+v", got)
+	}
+}
+
+func TestBindWithoutExtendIgnoresExtraHeaders(t *testing.T) {
+	sc, err := schema.New(studentRow{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := bind.MatchColumns(sc, map[int]string{0: "姓名", 1: "年龄", 2: "备注"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Extra) != 0 {
+		t.Fatalf("extra without extend field: %+v", m.Extra)
+	}
+}
+
 func TestBindPointerInlineAlloc(t *testing.T) {
 	type address struct {
 		City string `excel:"城市"`
@@ -112,4 +151,3 @@ func TestBindPointerInlineAlloc(t *testing.T) {
 		t.Fatalf("row: %+v", got)
 	}
 }
-

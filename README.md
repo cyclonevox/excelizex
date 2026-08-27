@@ -48,7 +48,7 @@ Excelizex 的目标：用 golang 做 excel 导入导出时，让开发者写得�
 - [x] `Each` / `EachMap` 绑定业务函数，支持并发
 - [x] FailFast
 - [x] 失败行可以通过 `WriteErrors` 回写错误列给用户改
-- [ ] 更复杂的多行表头 Layout（接口先留着，后面按需加）
+- [x] 多行表头：`layout.Stacked`（按列取最后非空单元格当列名） / `layout.Grouped`（分组标题 + 合并）
 
 写入方面：
 
@@ -56,9 +56,9 @@ Excelizex 的目标：用 golang 做 excel 导入导出时，让开发者写得�
 - [x] `Template()` 只出模板（提示 + 表头）
 - [x] 单级下拉、工作表保护
 - [x] 样式名组合（header / body / notice 这些）
-- [ ] 流式大批量写
-- [ ] 动态列 / 原来那种 extend 能力
-- [ ] 多级下拉
+- [x] `Stream` 流式大批量写（excelize StreamWriter）
+- [x] 动态列：`excel:",extend"` 的 `map[string]string` + `Extend(...)`
+- [x] 两级下拉：`Cascade`（INDIRECT + 名称管理器）
 
 其他：
 
@@ -92,12 +92,14 @@ import (
 - **Schema**：逻辑上有哪些列——列名、字段路径、样式名。它不管第几行是表头。`validate` tag 只当字符串存着，库自己不执行。
 - **Layout**：物理版式——提示在哪一行、表头占几行、数据从哪开始、怎么把表头收成列名。
 
-内置了两种常用的 Layout：
+内置了几种常用的 Layout：
 
 - `layout.NoticeHeaderData`：第 1 行提示，第 2 行表头，第 3 行起数据（默认）
 - `layout.HeaderData`：没有提示行
+- `layout.Stacked`：多行表头；每一列取**最后一个非空单元格**当列名（适合读别人做好的双表头）
+- `layout.Grouped`：分组标题行 + 列表头行，写出时会按 `Group.Span` 合并分组格
 
-以后要「双表头 / 数据从第 N 行」之类的，可以实现一个 Layout，也不用动绑定核心。
+还要「数据从第 N 行」之类的，可以实现一个 Layout，也不用动绑定核心。
 
 ### 需要特别注意的是：
 
@@ -115,6 +117,7 @@ import (
 | 校验 tag | `validate:"..."`（或你自己 validator 的 tag），库不解析 |
 | 忽略字段 | `excel:"-"` |
 | 嵌套展平 | `excel:",inline"` |
+| 动态列 | `excel:",extend"`（字段类型必须是 `map[string]string`；也认旧写法 `excel:"extend"`） |
 
 内置样式名可以组合，例如 `style:"header-red,body"`。自定义样式用 `wb.RegisterStyle(...)`。
 
@@ -202,6 +205,67 @@ type Row struct {
 ```
 
 展不平的复杂值，在 DTO 上写 `Excel*` / `ExcelField`，或者在 `Each` 业务里自己处理。别指望库去硬绑一整棵业务树。
+
+科目、自定义字段这种**列数随业务变**的，用 extend map：
+
+```go
+type ScoreRow struct {
+    Name  string            `excel:"姓名"`
+    Extra map[string]string `excel:",extend"`
+}
+
+err := excelizex.Write[ScoreRow](wb.Sheet("成绩").WithLayout(layout.HeaderData{})).
+    Extend("语文", "数学"). // 列顺序；Stream 时必须指定
+    Rows(ScoreRow{Name: "张三", Extra: map[string]string{"语文": "90", "数学": "80"}}).
+    Apply()
+```
+
+读的时候，表里多出来、不在 schema 里的列会进 `Extra`。`Rows()` 如果没调 `Extend`，会按各行 key 的排序并集补列。
+
+大批量导出用 `Stream`（不要和 `Rows` / `Template` 一起用）。`yield` 里不要再调同一个 Workbook 的其它方法（`Apply` 正拿着锁）：
+
+```go
+err := excelizex.Write[ScoreRow](wb.Sheet("成绩").WithLayout(layout.HeaderData{})).
+    Extend("语文", "数学").
+    Stream(func(yield func(ScoreRow) error) error {
+        for _, row := range src {
+            if err := yield(row); err != nil {
+                return err
+            }
+        }
+        return nil
+    }).
+    Apply()
+```
+
+两级下拉（省 → 市）：父格的值必须能当 Excel 定义名称（不要空格）。子列用 `INDIRECT` 指向隐藏表里的名称。可以链式再 `Cascade` 一层，但下一层的选项名不能重复：
+
+```go
+excelizex.Write[Row](wb.Sheet("导入").WithLayout(layout.HeaderData{})).
+    Cascade("市", "省", map[string][]string{
+        "浙江": {"杭州", "宁波"},
+        "江苏": {"南京", "苏州"},
+    }).
+    Template().
+    Apply()
+```
+
+双表头写出：
+
+```go
+lyt := layout.Grouped{
+    HasNotice: true,
+    Groups: []layout.Group{
+        {Title: "基本信息", Span: 2},
+        {Title: "成绩", Span: 2},
+    },
+}
+excelizex.Write[Row](wb.Sheet("导入").WithLayout(lyt).WithNotice("请填写")).
+    Rows(rows...).
+    Apply()
+```
+
+读别人做好的多行表头，用 `layout.Stacked{HasNotice: true}`（默认两行表头）即可。
 
 ---
 
@@ -359,7 +423,13 @@ func (r rowValidator) Validate(row any) error {
 go run ./examples/enrollment
 ```
 
-Godoc 短示例见 [`example_test.go`](example_test.go)。
+[`examples/scores`](examples/scores) 演示分组表头、`excel:",extend"` 动态科目列、年级→班级两级下拉，以及 `Stream` 汇总导出：
+
+```bash
+go run ./examples/scores
+```
+
+Godoc 短示例见 [`example_test.go`](example_test.go)（含 `ExampleWrite_extend` / `_stream` / `_cascade` / `_grouped`）。
 
 ---
 

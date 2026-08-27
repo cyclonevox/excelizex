@@ -54,6 +54,16 @@ func walkStruct(t reflect.Type, prefix string, s *Schema) error {
 			}
 			continue
 		}
+		if isExtendTag(excelTag) {
+			if s.ExtendField != "" {
+				return fmt.Errorf("schema: multiple extend fields (%s and %s)", s.ExtendField, prefix+f.Name)
+			}
+			if !isStringStringMap(f.Type) {
+				return fmt.Errorf("schema: extend field %s must be map[string]string, got %s", f.Name, f.Type)
+			}
+			s.ExtendField = prefix + f.Name
+			continue
+		}
 		if excelTag == "" {
 			continue
 		}
@@ -94,4 +104,18 @@ func shouldInline(f reflect.StructField, excelTag string) bool {
 	}
 
 	return excelTag == ",inline"
+}
+
+func isExtendTag(excelTag string) bool {
+	t := strings.TrimSpace(excelTag)
+
+	return t == "extend" || t == ",extend"
+}
+
+func isStringStringMap(t reflect.Type) bool {
+	for t != nil && t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	return t != nil && t.Kind() == reflect.Map && t.Key().Kind() == reflect.String && t.Elem().Kind() == reflect.String
 }

@@ -62,3 +62,24 @@ func TestExportRowTextMarshaler(t *testing.T) {
 	}
 	_ = reflect.ValueOf(gradeChar(1))
 }
+
+func TestExportRowExtend(t *testing.T) {
+	type row struct {
+		Name  string            `excel:"姓名"`
+		Extra map[string]string `excel:",extend"`
+	}
+	sc, err := schema.New(row{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cells, err := bind.ExportRow(sc, row{
+		Name:  "张三",
+		Extra: map[string]string{"语文": "90", "数学": "80"},
+	}, "语文", "数学")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cells) != 3 || cells[0] != "张三" || cells[1] != "90" || cells[2] != "80" {
+		t.Fatalf("cells: %v", cells)
+	}
+}

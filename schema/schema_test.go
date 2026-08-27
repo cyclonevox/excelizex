@@ -117,6 +117,55 @@ func TestParseDuplicateHeader(t *testing.T) {
 	}
 }
 
+func TestParseExtendMap(t *testing.T) {
+	type row struct {
+		Name  string            `excel:"姓名"`
+		Extra map[string]string `excel:",extend"`
+	}
+	sc, err := schema.New(row{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sc.ExtendField != "Extra" {
+		t.Fatalf("extend field: %q", sc.ExtendField)
+	}
+	if len(sc.Columns) != 1 || sc.Columns[0].Header != "姓名" {
+		t.Fatalf("columns: %+v", sc.Columns)
+	}
+}
+
+func TestParseExtendLegacyTag(t *testing.T) {
+	type row struct {
+		Extra map[string]string `excel:"extend"`
+	}
+	sc, err := schema.New(row{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sc.ExtendField != "Extra" {
+		t.Fatalf("extend field: %q", sc.ExtendField)
+	}
+}
+
+func TestParseExtendMustBeStringMap(t *testing.T) {
+	type row struct {
+		Extra map[string]int `excel:",extend"`
+	}
+	if _, err := schema.New(row{}); err == nil {
+		t.Fatal("expected type error")
+	}
+}
+
+func TestParseMultipleExtend(t *testing.T) {
+	type row struct {
+		A map[string]string `excel:",extend"`
+		B map[string]string `excel:"extend"`
+	}
+	if _, err := schema.New(row{}); err == nil {
+		t.Fatal("expected duplicate extend error")
+	}
+}
+
 func TestParseNilAndNonStruct(t *testing.T) {
 	if _, err := schema.New(nil); err == nil {
 		t.Fatal("expected nil error")

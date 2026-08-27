@@ -91,3 +91,130 @@ func ExampleWrite() {
 	// Output:
 	// written ok
 }
+
+type exampleScoreRow struct {
+	Name  string            `excel:"姓名"`
+	Extra map[string]string `excel:",extend"`
+}
+
+type exampleRegionRow struct {
+	Name     string `excel:"姓名"`
+	Province string `excel:"省"`
+	City     string `excel:"市"`
+}
+
+type exampleGroupedRow struct {
+	Name    string `excel:"姓名"`
+	Age     int    `excel:"年龄"`
+	Chinese int    `excel:"语文"`
+	Math    int    `excel:"数学"`
+}
+
+// ExampleWrite_extend shows dynamic extra columns via excel:",extend".
+func ExampleWrite_extend() {
+	wb := excelizex.New()
+	defer wb.Close()
+	if err := excelizex.Write[exampleScoreRow](wb.Sheet("成绩").WithLayout(layout.HeaderData{})).
+		Extend("语文", "数学").
+		Rows(exampleScoreRow{Name: "张三", Extra: map[string]string{"语文": "90", "数学": "80"}}).
+		Apply(); err != nil {
+		fmt.Println("write:", err)
+
+		return
+	}
+	rows, _, err := excelizex.Read[exampleScoreRow](wb.Sheet("成绩").WithLayout(layout.HeaderData{})).
+		Collect(context.Background())
+	if err != nil {
+		fmt.Println("read:", err)
+
+		return
+	}
+	fmt.Printf("%s 语文=%s 数学=%s\n", rows[0].Name, rows[0].Extra["语文"], rows[0].Extra["数学"])
+	// Output:
+	// 张三 语文=90 数学=80
+}
+
+// ExampleWrite_stream shows streaming export without holding all rows on the builder.
+func ExampleWrite_stream() {
+	wb := excelizex.New()
+	defer wb.Close()
+	src := []exampleScoreRow{
+		{Name: "张三", Extra: map[string]string{"语文": "90"}},
+		{Name: "李四", Extra: map[string]string{"语文": "88"}},
+	}
+	if err := excelizex.Write[exampleScoreRow](wb.Sheet("成绩").WithLayout(layout.HeaderData{})).
+		Extend("语文").
+		Stream(func(yield func(exampleScoreRow) error) error {
+			for _, row := range src {
+				if err := yield(row); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}).
+		Apply(); err != nil {
+		fmt.Println("write:", err)
+
+		return
+	}
+	rows, _, err := excelizex.Read[exampleScoreRow](wb.Sheet("成绩").WithLayout(layout.HeaderData{})).
+		Collect(context.Background())
+	if err != nil {
+		fmt.Println("read:", err)
+
+		return
+	}
+	fmt.Printf("streamed %d rows\n", len(rows))
+	// Output:
+	// streamed 2 rows
+}
+
+// ExampleWrite_cascade shows a parent/child dropdown (省 → 市).
+func ExampleWrite_cascade() {
+	wb := excelizex.New()
+	defer wb.Close()
+	if err := excelizex.Write[exampleRegionRow](wb.Sheet("地区").WithLayout(layout.HeaderData{})).
+		Cascade("市", "省", map[string][]string{
+			"浙江": {"杭州", "宁波"},
+			"江苏": {"南京", "苏州"},
+		}).
+		Template().
+		Apply(); err != nil {
+		fmt.Println("write:", err)
+
+		return
+	}
+	fmt.Println("cascade template ok")
+	// Output:
+	// cascade template ok
+}
+
+// ExampleWrite_grouped shows a two-row grouped header.
+func ExampleWrite_grouped() {
+	wb := excelizex.New()
+	defer wb.Close()
+	lyt := layout.Grouped{
+		Groups: []layout.Group{
+			{Title: "基本信息", Span: 2},
+			{Title: "成绩", Span: 2},
+		},
+	}
+	if err := excelizex.Write[exampleGroupedRow](wb.Sheet("成绩").WithLayout(lyt)).
+		Rows(exampleGroupedRow{Name: "张三", Age: 18, Chinese: 90, Math: 88}).
+		Apply(); err != nil {
+		fmt.Println("write:", err)
+
+		return
+	}
+	rows, _, err := excelizex.Read[exampleGroupedRow](wb.Sheet("成绩").WithLayout(lyt)).
+		Collect(context.Background())
+	if err != nil {
+		fmt.Println("read:", err)
+
+		return
+	}
+	fmt.Printf("%s 语文=%d\n", rows[0].Name, rows[0].Chinese)
+	// Output:
+	// 张三 语文=90
+}

@@ -28,6 +28,14 @@ Built-in layouts:
 
 - `layout.NoticeHeaderData`: notice, header, then data (default)
 - `layout.HeaderData`: header then data, no notice row
+- `layout.Stacked`: multi-row headers; the last non-empty cell in each column is the bound name
+- `layout.Grouped`: group title row + leaf headers (merged on write)
+
+Dynamic extra columns: `map[string]string` with `excel:",extend"`, plus `Extend("语文", "数学")` for column order.
+
+Large exports: `Stream(func(yield func(T) error) error { ... })` (not together with `Rows` / `Template`).
+
+Two-level dropdowns: `Cascade("市", "省", map[string][]string{"浙江": {"杭州", "宁波"}})`. Parent values must be valid Excel defined names (no spaces).
 
 ### Write a template or export rows
 
@@ -94,7 +102,7 @@ Common types (string / number / bool / time) convert automatically. Business enu
 - Sheet names are required.
 - `Open(r)` does not close `r`. Close `*os.File` yourself, and `wb.Close()` when done.
 - `Each` defaults to concurrency 1. `File()` returns the raw `*excelize.File` **without** the library lock.
-- Runnable example: [`examples/enrollment`](examples/enrollment) (template → dirty import → enroll → fix → export). Godoc examples: [`example_test.go`](example_test.go).
+- Runnable examples: [`examples/enrollment`](examples/enrollment) (template → dirty import → enroll → fix → export), [`examples/scores`](examples/scores) (grouped headers, extend columns, cascade dropdowns, stream export). Godoc examples: [`example_test.go`](example_test.go).
 
 ### Previous API
 
