@@ -1,103 +1,194 @@
 package excelizex
 
 import (
-	"github.com/xuri/excelize/v2"
+	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
+
+	"github.com/cyclonevox/excelizex/layout"
+	"github.com/xuri/excelize/v2"
 )
 
-type Result struct {
-	sector       int
-	dataStartRow int
-	SheetName    string
-	Notice       string
-	Header       []string
+const errorColumnHeader = "错误原因"
 
-	mu     sync.Mutex
-	errors ErrorInfos
-}
-
-type ErrorInfo struct {
-	ErrorRow int
-	RawData  []string
+// RowError describes one failed row.
+type RowError struct {
+	Row      int
+	RawCells []string
 	Messages []string
 }
 
-type ErrorInfos []ErrorInfo
+// Result collects row-level errors during read.
+type Result struct {
+	SheetName    string
+	Notice       string
+	Headers      []string
+	layout       layout.Layout
+	dataStartRow int
+	headerRow    int
 
-func (r *Result) addError(info ErrorInfo) {
+	mu     sync.Mutex
+	errors []RowError
+}
+
+func newResult(sheet string, lyt layout.Layout) *Result {
+	start, _ := lyt.HeaderRows()
+
+	return &Result{
+		SheetName:    sheet,
+		layout:       lyt,
+		dataStartRow: lyt.DataStartRow(),
+		headerRow:    start,
+	}
+}
+
+func (r *Result) setHeaders(headers []string) {
+	r.Headers = append([]string(nil), headers...)
+}
+
+func (r *Result) setNotice(text string) {
+	r.Notice = text
+}
+
+func (r *Result) addError(row int, cells []string, msgs ...string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.errors = append(r.errors, info)
+	r.errors = append(r.errors, RowError{
+		Row:      row,
+		RawCells: append([]string(nil), cells...),
+		Messages: append([]string(nil), msgs...),
+	})
 }
 
-func (f *File) removeDataLine(results *Result) (err error) {
-	var rows *excelize.Rows
-	if rows, err = f.excel().Rows(results.SheetName); err != nil {
-		return
-	}
-	defer rows.Close()
+// Errors returns a copy of collected row errors, sorted by Excel row number.
+func (r *Result) Errors() []RowError {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]RowError, len(r.errors))
+	copy(out, r.errors)
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].Row < out[j].Row
+	})
 
-	var i int
-	for rows.Next() {
-		i++
-		if i >= results.dataStartRow {
-			if err = f.excel().RemoveRow(results.SheetName, results.dataStartRow); err != nil {
-				return
-			}
-		}
-	}
-
-	return
+	return out
 }
 
-// SetResults 该方法会清除原始的表的数据。并将错误数据保留以及将错误原因写入原文件中
-func (f *File) SetResults(result *Result) (file *File, exist bool, err error) {
-	if result.dataStartRow == 0 || len(result.errors) == 0 {
-		return
-	} else {
-		exist = true
+// HasErrors reports whether any row errors were collected.
+func (r *Result) HasErrors() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return len(r.errors) > 0
+}
+
+// WriteErrors rewrites the sheet keeping only failed rows and appending an error column.
+func (wb *Workbook) WriteErrors(res *Result) error {
+	if res == nil || !res.HasErrors() {
+		return nil
+	}
+	wb.mu.Lock()
+	defer wb.mu.Unlock()
+	if wb.f == nil {
+		return fmt.Errorf("workbook: closed")
 	}
 
-	// 移除所有行
-	if err = f.removeDataLine(result); err != nil {
-		return
+	sheet := res.SheetName
+	rows, err := wb.f.GetRows(sheet)
+	if err != nil {
+		return fmt.Errorf("write errors: get rows: %w", err)
 	}
 
-	// 设置头部行
-	if result.Header[len(result.Header)-1] != "错误原因" {
-		result.Header = append(result.Header, "错误原因")
-		rowName := "A" + strconv.FormatInt(int64(result.dataStartRow-1), 10)
-		if err = f.excel().SetSheetRow(result.SheetName, rowName, &result.Header); err != nil {
-			return
+	if err := wb.removeDataRows(sheet, res.dataStartRow, len(rows)); err != nil {
+		return err
+	}
+
+	headers := append([]string(nil), res.Headers...)
+	if len(headers) == 0 {
+		return fmt.Errorf("write errors: missing headers")
+	}
+	if !hasErrorColumn(headers) {
+		headers = append(headers, errorColumnHeader)
+	}
+	headerAddr, err := excelize.JoinCellName("A", res.headerRow)
+	if err != nil {
+		return err
+	}
+	if err := wb.f.SetSheetRow(sheet, headerAddr, &headers); err != nil {
+		return fmt.Errorf("write errors: set header: %w", err)
+	}
+
+	errCol, err := excelize.ColumnNumberToName(len(headers))
+	if err != nil {
+		return err
+	}
+
+	writeRow := res.dataStartRow
+	for _, e := range res.Errors() {
+		row := padRow(e.RawCells, len(headers)-1)
+		addr, err := excelize.JoinCellName("A", writeRow)
+		if err != nil {
+			return err
+		}
+		if err := wb.f.SetSheetRow(sheet, addr, &row); err != nil {
+			return fmt.Errorf("write errors: set row: %w", err)
+		}
+		msgAddr, err := excelize.JoinCellName(errCol, writeRow)
+		if err != nil {
+			return err
+		}
+		if err := wb.f.SetCellStr(sheet, msgAddr, strings.Join(e.Messages, "; ")); err != nil {
+			return fmt.Errorf("write errors: set error cell: %w", err)
+		}
+		writeRow++
+	}
+
+	return nil
+}
+
+func (wb *Workbook) removeDataRows(sheet string, startRow, totalRows int) error {
+	for row := totalRows; row >= startRow; row-- {
+		if err := wb.f.RemoveRow(sheet, row); err != nil {
+			return fmt.Errorf("write errors: remove row %d: %w", row, err)
 		}
 	}
 
-	var errorInfoColumnName string
-	if errorInfoColumnName, err = excelize.ColumnNumberToName(len(result.Header)); err != nil {
-		return
+	return nil
+}
+
+func hasErrorColumn(headers []string) bool {
+	if len(headers) == 0 {
+		return false
 	}
 
-	var lastRow int
-	for index, errorInfo := range result.errors {
-		if lastRow == errorInfo.ErrorRow {
-			continue
-		} else {
-			lastRow = errorInfo.ErrorRow
-		}
+	return headers[len(headers)-1] == errorColumnHeader
+}
 
-		cellName := "A" + strconv.FormatInt(int64(result.dataStartRow+index), 10)
-		if err = f.excel().SetSheetRow(result.SheetName, cellName, &errorInfo.RawData); err != nil {
-			return
-		}
+func padRow(cells []string, width int) []string {
+	if len(cells) >= width {
+		out := make([]string, width)
+		copy(out, cells[:width])
 
-		errorInfoCellName := errorInfoColumnName + strconv.FormatInt(int64(result.dataStartRow+index), 10)
-		if err = f.excel().SetSheetRow(result.SheetName, errorInfoCellName, &errorInfo.Messages); err != nil {
-			return
-		}
+		return out
 	}
+	out := make([]string, width)
+	copy(out, cells)
 
-	file = f
+	return out
+}
 
-	return
+// DataStartRow returns the 1-based data start row captured from layout.
+func (r *Result) DataStartRow() int {
+	return r.dataStartRow
+}
+
+// HeaderRow returns the 1-based header start row.
+func (r *Result) HeaderRow() int {
+	return r.headerRow
+}
+
+// StringRow converts row number to excelize row reference helper.
+func StringRow(n int) string {
+	return strconv.Itoa(n)
 }

@@ -1,286 +1,376 @@
-## Excelizex 只是一个简单的excel库
-
-> **v2 在 [`./v2`](v2/README.md)**（模块 `github.com/cyclonevox/excelizex/v2`）：泛型 `Read[T]`/`Write[T]`、Schema 与 Layout 分离、DTO 上 `ExcelField` / `Excel{字段}` 做转换、可插拔校验。  
-> **不再使用** v1 的 `excel-conv` + `SetConvert`。根目录本文是 **v1**（功能冻结，仅维护；API 不跟 v2 兼容）。
+## Excelizex 只是一个简单的 excel 库
 
 中文| [English](README_ENG.md)
 
-Excelizex目标就是在使用golang导入excel时，使开发者调用更加方便,更简单。
+模块：`github.com/cyclonevox/excelizex`。需要 Go 1.22+（用到了泛型）。底层还是基于 [excelize](https://github.com/qax-os/excelize)。
 
-目前该库时是基于qax-os/excelize的封装。
-由此提供了提供了一些数据绑定，验证等功能，来更方便的支持业务编写。
-由于实际开发过程中本人接触的导入操作更多，目前该库也支持并发读取，重心暂时放在在读取方面。
-之后会完善更多功能，当然也包含代码优化，API简单化，以及尽可能的性能优化。
+Excelizex 的目标：用 golang 做 excel 导入导出时，让开发者写得更方便一点。
 
-鉴于时间和精力以及个人能力，目前只提供了 [提示信息行 - 表头行 - 数据行] excel模板，
-非常希望大家能够提出改进建议或者是直接提交代码。
+实际业务里最烦的往往不是读写单元格，而是：Excel 给你的是一堆 string，你手里却已经有一套带 tag、带校验、还可能嵌套的 DTO。以前为了一张导入表，controller / service 外面经常要写很多重复代码，并且无法使用已有的验证。这个库就是想把这部分省略。
 
-新项目或新导入表请优先看 [v2 README](v2/README.md)。下面是 v1 的说明与计划。
+现在这套 API 是泛型的 `Read[T]` / `Write[T]`：Schema 和 Layout 分开，DTO 上用 `ExcelField` / `Excel{字段}` 做转换，校验只留可插拔接口。
 
-[现状及目前计划](#目前计划或者已提供的功能有)
+校验：库里只留接口，tag 和具体校验交给项目里的 validator，不会在库里去解析 `validate` tag。
 
-[说明](#使用说明)
+鉴于时间和精力，非常希望大家能针对真实导入场景提建议，或者直接提 PR。
 
-[开始生成你的excel](#开始生成你的excel)
+[目前计划或者已提供的功能](#目前计划或者已提供的功能)
 
-[为Header和notice增加样式选项](#为Header和notice增加样式选项)
+[安装](#安装)
 
-[添加某一列的下拉选项](#添加某一列的下拉选项)
+[使用说明](#使用说明)
 
-[Excel数据读取业务支持](#Excel数据读取业务支持)
+[开始生成你的 excel](#开始生成你的-excel)
 
-[字段转换器](#字段转换器)
+[读取数据并绑业务](#读取数据并绑业务)
+
+[字段转换](#字段转换)
 
 [字段验证器](#字段验证器)
 
+[并发和资源](#并发和资源)
 
-****
+[示例](#示例)
 
-### 目前计划或者已提供的功能有
+[旧版](#旧版)
+
+---
+
+### 目前计划或者已提供的功能
 
 读取方面：
 
-- [x] 基本的数据绑定，可以通过结构体的tag来提供生成excel表格，或读取excel表格数据
-- [x] 读取excel表格时可扩展的数据验证支持，仅需要实现excelizex.Validate接口。
-- [x] 在读取excel数据时，通过设置转换器，来完成业务的需求下对excel中数据的转换。是方便有重复的转换场景，便于减少代码。
-- [x] 在数据绑定的结构体下 支持并发读取表行的功能，绑定业务函数进行业务编写。
-- [x] 实现单级下拉选项菜单
-- [ ] 提供更便利的多级下拉菜单的生成方法
+- [x] 通过结构体 tag 生成 Schema，按列名绑定（列顺序乱了也能对上）
+- [x] 内置 string / 数字 / bool / time 转换；DTO 转换：`ExcelField` 接口（直调）或 `Excel{字段}`（图省事，反射）
+- [x] `,inline` 把嵌套结构展平到列上
+- [x] 可扩展的数据验证，实现 `Validator` 接口即可（playground / validatorx 都行）
+- [x] `Collect` 聚合成功行，`Result` 保留行级错误
+- [x] `Each` / `EachMap` 绑定业务函数，支持并发
+- [x] FailFast
+- [x] 失败行可以通过 `WriteErrors` 回写错误列给用户改
+- [ ] 更复杂的多行表头 Layout（接口先留着，后面按需加）
 
 写入方面：
 
-- [x] 通过流式写入功能支持对读取表的验证和业务操作后产生的结果生成excel文件
-- [x] 简单的数据写入依旧可以通过数据绑定的形式来生成数据。当然意味着略多的消耗。
-- [ ] 通过实现excelizex提供的迭代器接口来配合 qax-os/excelize的流式写入方法 对Excel文件批量写入
+- [x] `Write[T]` 导出数据
+- [x] `Template()` 只出模板（提示 + 表头）
+- [x] 单级下拉、工作表保护
+- [x] 样式名组合（header / body / notice 这些）
+- [ ] 流式大批量写
+- [ ] 动态列 / 原来那种 extend 能力
+- [ ] 多级下拉
 
+其他：
 
-- [x] excel加密限制，目前使用qax-os/excelize提供的excel内置加密保护选项。
-- [ ] 更多的单元测试保证代码实现的正确性
-- [ ] 后面的想到再说吧。。。。233
+- [x] 常规路径都返回 `error`，不再靠 panic 走控制流
+- [x] Workbook 里对 excelize 做了互斥，避免 `Each` 和 `Save`/`Apply` 踩同一把
+- [x] `example_test.go` + `e2e/` 业务场景测试
+- [x] Schema 和 Layout 拆开了：列模型不管物理行号，版式可以换
+- [ ] 后面想到再说吧。。。
 
-****
+---
 
-// 使用说明正在施工中...
+### 安装
 
-### 使用说明：
+```bash
+go get github.com/cyclonevox/excelizex
+```
 
-众所周知，一个excel文件由多个sheet来组成，所以符合直觉的是，不管是qax-os/excelize,还是excelizex也都是这也做的。
+```go
+import (
+    "github.com/cyclonevox/excelizex"
+    "github.com/cyclonevox/excelizex/layout"
+)
+```
 
-不同的是excelizex基于反射去获取对象的tag来生成sheet，仅需要简单的tag就可以完成sheet的生成等工作，目前tag也仅包含了 excel,
-style ,validate
-无论是设置表头、提示的样式还是数据。当然一旦这样做，sheet也就仅内置好了三种类型，notice-抬头提示 header-表头 以及data-数据行
+---
+
+### 使用说明
+
+一个 excel 文件由多个 sheet 组成。excelizex 也是围着 Sheet 转的。列模型和物理版式拆成两块：
+
+- **Schema**：逻辑上有哪些列——列名、字段路径、样式名。它不管第几行是表头。`validate` tag 只当字符串存着，库自己不执行。
+- **Layout**：物理版式——提示在哪一行、表头占几行、数据从哪开始、怎么把表头收成列名。
+
+内置了两种常用的 Layout：
+
+- `layout.NoticeHeaderData`：第 1 行提示，第 2 行表头，第 3 行起数据（默认）
+- `layout.HeaderData`：没有提示行
+
+以后要「双表头 / 数据从第 N 行」之类的，可以实现一个 Layout，也不用动绑定核心。
 
 ### 需要特别注意的是：
 
-由于目前excelizex是基于qax-os/excelize做的，so
+1. Sheet 名称还是必要的，不然不好定位你要操作哪张表。
+2. `New()` 创建空白文件时，excelize 默认会带一张 `Sheet1`；写出其他表名时可能会被清掉。`Open()` 打开已有文件时**不会**自动删任何 Sheet。
+3. `Open(r)` 只把内容交给 excelize 读，**不会**帮你关 `r`。`*os.File` 请自己 `Close`。Workbook 用完记得 `wb.Close()`。
 
-1. Sheet的名称是必要的。否则excelizex不方便找到你所需要操作的表是什么
-2. Sheet的名称不能使用Sheet1名称，因为 qax-os/excelize 默认最后会删除名称为Sheet1的表
+常用 tag：
 
-****
+| 点 | 写法 |
+| --- | --- |
+| 表头列 | `excel:"姓名"` |
+| 提示行核对 | 多数情况 `WithNotice("...")`；需要读时核对提示文案时再留 `excel:"notice"` |
+| 转换 | DTO：`ExcelFieldImporter` / `ExcelFieldExporter`，或 `ExcelGrade` / `ExcelExportGrade` |
+| 校验 tag | `validate:"..."`（或你自己 validator 的 tag），库不解析 |
+| 忽略字段 | `excel:"-"` |
+| 嵌套展平 | `excel:",inline"` |
 
-### 开始生成你的excel：
+内置样式名可以组合，例如 `style:"header-red,body"`。自定义样式用 `wb.RegisterStyle(...)`。
 
-通常情况下，无论你是要生成一个待填写的模板，还是说一份已经装载好数据的表单，设置一个类型是实现业务的第一步。
-使用大多情况下，你仅仅需要使用`excel` tag即可，tag填写`type|content`，
-其中type是该字段生命该列是作为notice还是还是header，而content仅在header下生效，以为其对应的表头content即是指该列表头的具体内容。
+| 样式名 | 用途 |
+| --- | --- |
+| `notice` | 提示行 |
+| `header` / `header-red` | 表头 |
+| `body` / `body-blue` | 数据列 |
+| `locked` / `unlocked` | 保护相关 |
 
-#### 例如现在有testStruct类型，并且为其已经加好tag
+---
+
+### 开始生成你的 excel
+
+通常情况下，无论你是要生成一个待填写的模板，还是一份已经装好数据的表，先定一个类型还是第一步。
+
+大多情况下用 `excel` tag 就够了，内容就是表头名。特殊格式在 DTO 上写转换方法（见 [字段转换](#字段转换)）；校验 tag 留给你自己的 validator。
+
+#### 例如现在有个 Row 类型，并且已经加好 tag
 
 ```go
-type Test struct {
-Notice  string `excel:"notice"`
-IdCard  string `excel:"header|身份证号" `
-Name    string `excel:"header|姓名" `
-Grade   string `excel:"header|年级" `
-Class   string `excel:"header|班级" `
-// 当然如果你不需要notice作为sheet中的提醒，当你结构体中没有notice tag时则不会生成notice行。
-// 以本例来说 notice 会直接将Test.Notice中值作为notice内容。
+type Row struct {
+    Name  string `excel:"姓名" validate:"required"`
+    Age   int    `excel:"年龄"`
+    Grade int    `excel:"等级"`
+}
+
+// 图省事：按字段写 ExcelGrade（反射调用）
+func (r *Row) ExcelGrade(raw string) error {
+    g, err := grade.Parse(raw)
+    if err != nil {
+        return err
+    }
+    r.Grade = int(g)
+    return nil
+}
+
+func (r *Row) ExcelExportGrade() (string, error) {
+    return grade.Format(r.Grade)
+}
+
+// 要性能也可以不写上面两个，改实现 ExcelField / ExcelExportField，内部 switch 表头
+```
+
+然后 `New()` 出一个 workbook，链式写出去：
+
+```go
+wb := excelizex.New()
+defer wb.Close()
+
+err := excelizex.Write[Row](wb.Sheet("导入").
+    WithLayout(layout.NoticeHeaderData{}).
+    WithNotice("请填写信息")).
+    Dropdown("等级", []string{"A", "B"}).
+    Protect("secret"). // 可选
+    Rows(rows...).
+    Apply()
+```
+
+只发模板、不要数据行的话：
+
+```go
+excelizex.Write[Row](wb.Sheet("导入").
+    WithLayout(layout.NoticeHeaderData{}).
+    WithNotice("请填写信息")).
+    Template().
+    Apply()
+```
+
+`Apply()` 是整表重建：会先清掉目标 Sheet 上旧的数据行、数据验证，以及本库写选项时生成的辅助表，再写出这次的 notice / 表头 / 数据。所以同一张表第二次 `Apply`（包括再出一遍 `Template()`）不会残留上次的数据行。
+
+保存用 `wb.Save(w)`；实在要逃逸可以 `wb.File()` 拿底层 `*excelize.File`（但注意下面并发那节）。工作表保护走 `Protect(password)`。
+
+嵌套字段可以 `,inline` 展平：
+
+```go
+type Address struct {
+    City   string `excel:"城市"`
+    Street string `excel:"街道"`
+}
+type Row struct {
+    Name string  `excel:"姓名"`
+    Addr Address `excel:",inline"`
 }
 ```
 
-紧接着就可以调用excelize.New()创建excel文件，再链式的调用AddSheet()方法
+展不平的复杂值，在 DTO 上写 `Excel*` / `ExcelField`，或者在 `Each` 业务里自己处理。别指望库去硬绑一整棵业务树。
+
+---
+
+## 读取数据并绑业务
+
+依旧以 Row 为例。你可以用实现了 `io.Reader` 的东西喂给 `Open`。
 
 ```go
-ee := new(dto.Test)
-ee.Notice = "*表格中标红字段为必填项，请按要求进行填写，否则可能会导致数据导入失败"
-es := excelizex.New().AddSheet("导入导入", ee)
-
-// 紧接着，你可以使用bufffer和SaveAs来帮助你生成文件(当然该方法直接支持excel加密)
-es.buffer()
-es.SaveAs("文件名称")
-```
-
-当然如果你想生成或者导出数据，你可以直接将一个类型的切片传入到AddSheet方法中，excelizex会生成一张表
-还是以本例中的Test struct为例:
-
-```go
-ees:= make([]*dto.Test)
-ees = append(ees, &Test{
-Notice: "*表格中标红字段为必填项，请按要求进行填写，否则可能会导致数据导入失败",
-IdCard: 123123123123,
-Name:"测试人员",
-Grade:"一年级",
-Class:"二班"
-})
-es := excelizex.New().AddSheet("导入导入", ees)
-```
-
-### 为Header和notice增加样式选项
-
-首先excelizex提供了几种内置的style：
-
-1. default-notice
-2. default-header-red
-3. default-header
-4. default-all
-5. red-font
-6. alignment
-7. numFmtText
-8. default-locked
-9. default-no-locked
-
-```go
-type Test struct {
-Notice  string `excel:"notice" style:"default-notice"`
-IdCard  string `excel:"header|身份证号" style:"default-header-red"`
-Name    string `excel:"header|姓名" style:"default-header-red" `
-Grade   string `excel:"header|年级" style:"default-header-red" `
-Class   string `excel:"header|班级" style:"default-header-red" `
-}
-```
-
-当然你完全可以在tag层面相互组合。例如`style:"red-font,alignment"` execlizex检测到后会自动组合两种style，
-但值得注意的是，excelizex的style还是基于excelize.Style来做的，所以相同字段会被覆盖，所以无论是从这点来看excelizex还实现了style的添加功能
-你可以实现excelizex.Style接口，你也可以直接使用excelizex.style.DefaultStyle
-
-```go
-excelizex.New().AddStyles("custom-style", NewDefaultStyle(&excelize.Style{NumFmt: 49}))
-```
-
-### 添加某一列的下拉选项
-
-```go
-excelizex.New().AddSheet("考生导入", ee,
-NewOptions("学生姓名", []string{"tom", "jerry"}),
-NewOptions("学生号码", []string{"13380039232", "13823021932", "17889032312"}),
-NewOptions("学生编号", []string{"1", "2", "3"}),
-)
-```
-
-excelizex.NewOptions 中第一个入参请填写那一列的header名称，而后面的数组即是选项。
-
-****
-
-## Excel数据读取业务支持
-
-依旧以Test类型为例
-
-```go
-type Test struct {
-Notice  string `excel:"notice"`
-IdCard  string `excel:"header|身份证号" `
-Name    string `excel:"header|姓名" `
-Grade   string `excel:"header|年级" `
-Class   string `excel:"header|班级" `
-```
-
-你可以使用实现了io.Reader接口的任何对象来作为excelizex.New的入参。excelizex内置了一些从http
-body获取或者multipart提取excel文件的方法。
-
-```go
-goNum:= 1
-f, err := os.Open("./xlsx/batch_data.xlsx")
+f, err := os.Open("import.xlsx")
 if err != nil {
-panic(err)
+    return err
 }
-r := excelizex.New(f).Read(new(Test), "Sheet1").Run(func (a any) (err error) {
-b := a.(*Test)
-time.Sleep(1 * time.Second)
-fmt.Println(b)
+defer f.Close()
 
-return
-}, goNum)
-
-```
-
-该示例中，goNum设置为1以上时，则为并发读取操作。Run 中传入的func(a any)(err error)为具体的业务函数。
-
-excel每行读取后，则会执行匿名函数的内容。
-
-### 字段转换器
-
-本类型中，需要注意的是，我们不仅使用`excel`tag 还使用了`excel-conv`的tag，
-
-```go
-type Test2 struct {
-Id   int64  `excel:"header|埃低"`
-Name string `excel:"header|名称"`
-List []struct {
-Id int64
-} `excel:"header|列表" excel-conv:"list"`
-}
-```
-
-往往，在业务中，你的很多操作并非是类型完全一致的，并且可能你还可能会对excel提取上来的值做某些的处理。
-例如枚举值等等，用户可能填的是 是、否，而你实际业务中需要的是 true false。
-
-该方法有点类似于中间件一样，在excel中表格的值映射至每个对象中时，会先执行此函数，以避免excelize读取出的string类型与你的业务中使用的结构体完全不同
-。
-
-当然这样的简单的东西你也完全可以写道业务代码中去处理。但最后我还是保留了这个方法以减少重复的业务代码。
-当你使用与业务同样的类型来做excel操作时，也许他会有点作用。如何使用转换器、是否使用转换器都取决于你自己。
-
-在该例子中他代表会使用名称为list的转换器将该表头下的数据进行转换。
-
-```go
-func listConvert(rawData string) (any, error) {
-i, err := strconv.ParseInt(rawData, 10, 64)
+wb, err := excelizex.Open(f)
 if err != nil {
-return nil, err
+    return err
 }
+defer wb.Close()
 
-return []struct{ Id int64 }{{i}}, nil
-}
-
-var (
-sList []readTestStruct
-s = new(readTestStruct)
-)
-
-file.SetConvert("list", listConvert)
-
+rows, res, err := excelizex.Read[Row](wb.Sheet("导入").
+    WithLayout(layout.NoticeHeaderData{}).
+    WithNotice("请按模板填写")). // 需要核对提示文案时再用
+    Validate(myValidator).
+    Collect(ctx)
+// rows：绑定+校验都过了的行
+// res.Errors()：行号 + 原因；可以用 wb.WriteErrors(res) 回写给用户改
 ```
+
+如果更想逐行进业务（可以并发）：
+
+```go
+_, err = excelizex.Read[Row](wb.Sheet("导入").WithLayout(layout.NoticeHeaderData{})).
+    Validate(myValidator).
+    Each(ctx, func(ctx excelizex.Context, row Row) error {
+        return svc.Create(ctx, row)
+    }, excelizex.Concurrency(8))
+```
+
+Excel 行结构和 Service 命令对不上时，用 `EachMap` 做一层很薄的映射就行，没必要硬把 tag 贴到大聚合根上。
+
+---
+
+### 字段转换
+
+单元格读上来永远是 string。常见类型（string / 数字 / bool / time）库会帮你转。业务枚举、特殊格式挂在 **DTO 方法**上。
+
+库导出了两个兜底接口（实现对应方法即可，不必显式写 `var _ ExcelFieldImporter = ...`）：
+
+```go
+type ExcelFieldImporter interface {
+    ExcelField(header, raw string) (handled bool, err error)
+}
+
+type ExcelFieldExporter interface {
+    ExcelExportField(header string) (val string, handled bool, err error)
+}
+```
+
+#### 写法一：要性能 / 列比较多 —— 实现上面两个接口，自己 switch
+
+```go
+func (r *Row) ExcelField(header, raw string) (bool, error) {
+    switch header {
+    case "等级":
+        g, err := grade.Parse(raw) // 枚举逻辑仍在枚举包，不必改领域类型
+        if err != nil {
+            return true, err
+        }
+        r.Grade = int(g)
+        return true, nil
+    default:
+        return false, nil // 这列交给库内置转换
+    }
+}
+
+func (r *Row) ExcelExportField(header string) (string, bool, error) {
+    if header != "等级" {
+        return "", false, nil
+    }
+    s, err := grade.Format(r.Grade)
+    return s, true, err
+}
+```
+
+固定方法名，库断言成接口后**直接调用**（不走反射 `Call`）。
+
+#### 写法二：图省事 —— 按字段名写 `Excel{字段}` / `ExcelExport{字段}`
+
+```go
+func (r *Row) ExcelGrade(raw string) error { ... }         // 读：字段名 Grade → ExcelGrade
+func (r *Row) ExcelExportGrade() (string, error) { ... } // 写（Go 不能重载，所以导出方法加 Export）
+```
+
+写起来短，但方法名是动态拼的，只能反射调用，比写法一慢一点。少量列、不在意这点开销时够用。
+
+优先级（读）：`Excel{字段}` → `ExcelField` → `TextUnmarshaler` → 内置。  
+优先级（写）：`ExcelExport{字段}` → `ExcelExportField` → `TextMarshaler` → 内置。
+
+想看两者实际差距可以跑（5 个需转换列的对照）：
+
+```bash
+go test ./bind/ -bench='BenchmarkBindRow_|BenchmarkExportRow_' -benchmem
+```
+
+一次性、只在业务里用的逻辑，也可以继续写在 `Each` / `Collect` 之后，不必挂 DTO。
+
+---
 
 ### 字段验证器
 
-在处理http web业务时，验证操作大多都放在了中间件或者说controller等层来做数据绑定并验证。
+处理 http 业务时，验证大多放在中间件或者 controller 那一层。excelizex 这边也一样：只要实现 Validate 接口，就可以在业务函数执行前挂上去。
 
-那么在exceliezx中，数据表的验证实际上可以使用和go-playground/validator/v10同样的数据验证。只要实现Validate接口的的方法都可以被
-添加到excelizex的添加方法中。只要在业务执行函数之前调用SetValidates传入验证器的实现即可使用验证器。
-当然不要忘记在具体使用的类型上加上tag，具体的tag当然取决于你的验证器具体实现。
-
-例如我使用在基于go-playground/validator/v10封装的cyclonevox/validatorx 则使用的tag为`validation`
+**库只留钩子，不替你选校验框架。**
 
 ```go
-
-type Test struct {
-Notice  string `excel:"notice" style:"default-notice"`
-IdCard  string `excel:"header|身份证号" style:"default-header-red"  validate:"required,id_card"`
-Name    string `excel:"header|姓名" style:"default-header-red"  validate:"required"`
-Grade   string `excel:"header|年级" style:"default-header-red" `
-Class   string `excel:"header|班级" style:"default-header-red" `
-}
-
-```
-
-```go
-if results, err = excel.Read(new(Test), "考生导入").
-SetValidates(e.validator).Run(func (any any) (err error) {
-ee := any.(*Test)
-...
+type Validator interface {
+    Validate(row any) error
 }
 ```
 
-// 未完待续
+绑定完成后、业务回调前，会对每行调用 `Validate(&row)`（传指针，方便 `Struct()` 写回）。  
+DTO 上的 `validate:"required,id_card"` 之类，仍然由你项目里的 playground / validatorx 解释。
 
+例如：
+
+```go
+type rowValidator struct{ v *validator.Validate }
+
+func (r rowValidator) Validate(row any) error {
+    return r.v.Struct(row)
+}
+
+// Read[T](...).Validate(rowValidator{v: validatorx.New()}).Collect(ctx)
+```
+
+---
+
+### 并发和资源
+
+- Workbook 上的库方法（`Save` / `Close` / `Apply` / 读表 / `WriteErrors` 等）内部有互斥，可以和 `Each` 一起用，不至于数据竞争。
+- `Each` 默认并发是 **1**（串行）。`Concurrency(n)` / `SetConcurrency(n)` 控制 worker 上限。
+- `File()` 是逃逸口：返回的 `*excelize.File` **不受**库锁保护，不要跟正在并发跑的库 API 混用同一句柄。
+- 大文件可以看 `WithUnzipSizeLimit` / `WithUnzipXMLSizeLimit`。
+
+依赖上锁定 Go 1.22+。底层 excelize 先停在 `v2.9.0`：上游 `v2.9.1+` / `v2.10+` 会抬高 Go 版本要求，go 版本升级后面会逐步考虑。
+
+---
+
+### 示例
+
+[`examples/enrollment`](examples/enrollment) 是一条完整的考务导入：下发模板 → 班主任交表（含填错）→ 校验入库 → 错误列退回 → 改完再导 → 导出名单。
+
+```bash
+go run ./examples/enrollment
+```
+
+Godoc 短示例见 [`example_test.go`](example_test.go)。
+
+---
+
+### 旧版
+
+旧版说明见 [README_v1.md](README_v1.md)。代码在 git tag [`v1.5.7`](https://github.com/cyclonevox/excelizex/tree/v1.5.7)：
+
+```bash
+go get github.com/cyclonevox/excelizex@v1.5.7
+```
+
+本仓库主线不再维护那套接口，也不提供兼容层。
+
+欢迎针对真实导入场景提需求或 PR。

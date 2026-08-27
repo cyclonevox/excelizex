@@ -6,17 +6,14 @@ on:
   pull_request:
 
 jobs:
-  v2:
+  test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: v2
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22.x"
-          cache-dependency-path: v2/go.sum
+          cache-dependency-path: go.sum
       - name: vet
         run: go vet ./...
       - name: test

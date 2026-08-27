@@ -1,137 +1,66 @@
 package excelizex
 
 import (
-	"reflect"
-	"strconv"
-
-	"github.com/xuri/excelize/v2"
+	"github.com/cyclonevox/excelizex/layout"
+	"github.com/cyclonevox/excelizex/schema"
 )
 
+// Sheet is a fluent handle for one worksheet.
 type Sheet struct {
-	// 表名
-	name string
-	// 格式化后的数据
-	// 顶栏提示
+	wb     *Workbook
+	name   string
+	layout layout.Layout
+	schema *schema.Schema
 	notice string
-	// 表头
-	header []string
-	// 数据
-	data *[][]any
-
-	// 下拉选项 暂时只支持单列
-	pd *pullDown
-	// 列和style分配语句的映射存储
-	// v:Col -> k:style raw string list;col 为 -1时为notice/
-	styleRef map[int][]string
-	// 写入到第几行,主要用于标记生成excel中的表时，需要续写的位置
-	writeRow int
 }
 
-func NewSheet(sheetName string, a any) *Sheet {
-	if sheetName == "" {
-		panic("Sheet name cannot be empty")
+// Sheet selects a worksheet by name.
+func (wb *Workbook) Sheet(name string) *Sheet {
+	return &Sheet{
+		wb:     wb,
+		name:   name,
+		layout: layout.NoticeHeaderData{},
 	}
-
-	s := newMetas(a).sheet(sheetName)
-
-	return s
 }
 
-func (s *Sheet) Excel() *File {
-	if s.name == "" {
-		panic("need a Sheet name at least")
-	}
-
-	return New().AddFormattedSheets(s)
-}
-
-func getRowData(row any) (list []any) {
-	typ := reflect.TypeOf(row)
-	val := reflect.ValueOf(row)
-
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-		val = val.Elem()
-	}
-
-	switch typ.Kind() {
-	case reflect.Struct:
-		for j := 0; j < typ.NumField(); j++ {
-			field := typ.Field(j)
-
-			hasTag := field.Tag.Get("excel")
-			if hasTag != "" && hasTag != "notice" {
-				list = append(list, val.Field(j).Interface())
-			}
-		}
-	case reflect.Slice:
-		for i := 0; i < val.Len(); i++ {
-			list = append(list, val.Index(i).Interface())
-		}
-
-	default:
-		panic("support struct only")
-	}
-
-	return
-}
-
-// findHeaderColumnNames 寻找表头名称或者是列名称
-func (s *Sheet) findHeaderColumnNames(headName string) (columnNames []string, err error) {
-	var columnName string
-
-	for i, h := range s.header {
-		if h == headName {
-			if columnName, err = excelize.ColumnNumberToName(i + 1); err != nil {
-				return
-			}
-
-			columnNames = append(columnNames, columnName)
-		}
-	}
-
-	return
-}
-
-// SetOptions 设置下拉的选项
-func (s *Sheet) SetOptions(headOrColName string, options any) *Sheet {
-	names, err := s.findHeaderColumnNames(headOrColName)
-	if err != nil {
-		panic(err)
-	}
-
-	pd := newPullDown()
-	for _, name := range names {
-		pd.addOptions(name, options)
-	}
-
-	if s.pd == nil {
-		s.pd = pd
-	} else {
-		s.pd.merge(pd)
+// WithLayout sets the physical layout for this sheet.
+func (s *Sheet) WithLayout(l layout.Layout) *Sheet {
+	if l != nil {
+		s.layout = l
 	}
 
 	return s
 }
 
-// nextWriteRow 会获取目前该写入的行
-// 每次调用该方法表示行数增长 返回 A1 A2... 等名称
-func (s *Sheet) nextWriteRow(num ...int) string {
-	if len(num) > 0 {
-		s.writeRow += num[0]
-	} else {
-		s.writeRow++
+// WithSchema overrides schema parsed from the row type.
+func (s *Sheet) WithSchema(sc schema.Schema) *Sheet {
+	cp := sc
+	s.schema = &cp
+
+	return s
+}
+
+// WithNotice sets the expected notice text for validation (optional).
+func (s *Sheet) WithNotice(text string) *Sheet {
+	s.notice = text
+
+	return s
+}
+
+// Read begins a generic read pipeline for row type T.
+// Use as: wb.Sheet("导入").WithLayout(...).Read[StudentRow]()
+func Read[T any](s *Sheet) *ReadBuilder[T] {
+	return &ReadBuilder[T]{
+		sheet:       s,
+		validators:  nil,
+		concurrency: 1,
 	}
-
-	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
 }
 
-func (s *Sheet) getWriteRow() string {
-	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
-}
-
-func (s *Sheet) resetWriteRow() string {
-	s.writeRow = 1
-
-	return "A" + strconv.FormatInt(int64(s.writeRow), 10)
+// Write begins a generic write pipeline for row type T.
+// Use as: wb.Sheet("导入").WithLayout(...).Write[StudentRow]().Rows(...).Apply()
+func Write[T any](s *Sheet) *WriteBuilder[T] {
+	return &WriteBuilder[T]{
+		sheet: s,
+	}
 }

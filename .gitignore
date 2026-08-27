@@ -1,3 +1,7 @@
 /.idea
 .cursor/
 .gomodcache/
+/vendor/
+/.vendor_removed/
+examples/enrollment/out/
+/enrollment
